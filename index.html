@@ -1,0 +1,2390 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IVSS · OA Cabimas — Sistema de Atención</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --navy: #002d5e;
+            --navy-light: #1a4a8a;
+            --navy-dark: #001d3d;
+            --gold: #c8922a;
+            --gold-light: #e8b04a;
+            --gold-pale: #fef3dd;
+            --bg: #eef2f8;
+            --surface: #ffffff;
+            --surface2: #f5f7fb;
+            --border: #d4dbe8;
+            --text: #1a2744;
+            --text-muted: #6b7a99;
+            --red: #c0392b;
+            --green: #1a7a4a;
+            --green-pale: #e8f5ee;
+            --red-pale: #fdecea;
+            --sidebar-w: 260px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Barlow', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            font-size: 15px;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--navy-dark);
+            min-height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gold);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .brand-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.1;
+            letter-spacing: .3px;
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            color: rgba(255, 255, 255, .45);
+            font-weight: 500;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 0;
+            overflow-y: auto;
+        }
+
+        .nav-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, .3);
+            padding: 12px 20px 4px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 20px;
+            color: rgba(255, 255, 255, .65);
+            cursor: pointer;
+            transition: all .15s;
+            border-left: 3px solid transparent;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, .06);
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: rgba(200, 146, 42, .12);
+            color: var(--gold-light);
+            border-left-color: var(--gold);
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 22px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255, 255, 255, .08);
+            font-size: 11px;
+            color: rgba(255, 255, 255, .3);
+            text-align: center;
+        }
+
+        /* ── MAIN ── */
+        .main {
+            margin-left: var(--sidebar-w);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            background: var(--surface);
+            border-bottom: 2px solid var(--border);
+            padding: 0 32px;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: .3px;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-date {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-family: 'Barlow', sans-serif;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            transition: all .15s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--navy-light);
+        }
+
+        .btn-gold {
+            background: var(--gold);
+            color: #fff;
+        }
+
+        .btn-gold:hover {
+            background: var(--gold-light);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--border);
+            color: var(--text-muted);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--navy);
+            color: var(--navy);
+        }
+
+        .btn-sm {
+            padding: 5px 12px;
+            font-size: 13px;
+        }
+
+        .btn-danger {
+            background: var(--red);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            opacity: .88;
+        }
+
+        .content {
+            padding: 32px;
+            flex: 1;
+        }
+
+        /* ── SECTION HEADER ── */
+        .section-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .section-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--navy);
+            letter-spacing: .2px;
+        }
+
+        .section-sub {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-top: 3px;
+        }
+
+        /* ── STAT CARDS ── */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: 14px;
+            padding: 22px 24px;
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--navy);
+        }
+
+        .stat-card.gold::before {
+            background: var(--gold);
+        }
+
+        .stat-card.green::before {
+            background: var(--green);
+        }
+
+        .stat-card.red::before {
+            background: var(--red);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+
+        .stat-card.gold .stat-value {
+            color: var(--gold);
+        }
+
+        .stat-card.green .stat-value {
+            color: var(--green);
+        }
+
+        .stat-sub-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* ── CARDS / PANELS ── */
+        .card {
+            background: var(--surface);
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .card-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* ── TABLE ── */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        thead tr {
+            background: var(--surface2);
+            border-bottom: 2px solid var(--border);
+        }
+
+        th {
+            padding: 10px 14px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tbody tr:hover {
+            background: var(--surface2);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .3px;
+            white-space: nowrap;
+        }
+
+        .tag-afil {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .tag-prest {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .tag-recaud {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .tag-cesante {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .tag-fisc {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .tag-otras {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .tag-m {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .tag-f {
+            background: #fce7f3;
+            color: #be185d;
+        }
+
+        /* ── SEARCH / FILTERS ── */
+        .filters-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .filter-input {
+            padding: 8px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Barlow', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--surface);
+            outline: none;
+            transition: border-color .15s;
+            min-width: 160px;
+        }
+
+        .filter-input:focus {
+            border-color: var(--navy-light);
+        }
+
+        /* ── MODAL ── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 29, 61, .55);
+            z-index: 500;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 24px 16px;
+            overflow-y: auto;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 780px;
+            animation: modal-in .2s ease;
+            margin: auto;
+        }
+
+        @keyframes modal-in {
+            from {
+                opacity: 0;
+                transform: translateY(-16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .modal-close {
+            width: 34px;
+            height: 34px;
+            border: none;
+            background: var(--surface2);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            transition: all .15s;
+        }
+
+        .modal-close:hover {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        .modal-body {
+            padding: 28px;
+        }
+
+        .modal-footer {
+            padding: 16px 28px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* ── FORM ── */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        .form-grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 18px;
+        }
+
+        .form-full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            padding: 9px 13px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-family: 'Barlow', sans-serif;
+            font-size: 14px;
+            color: var(--text);
+            background: var(--surface);
+            outline: none;
+            transition: border-color .15s;
+            width: 100%;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            border-color: var(--navy-light);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-section-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--navy);
+            background: var(--surface2);
+            padding: 8px 14px;
+            border-radius: 8px;
+            margin: 20px 0 14px;
+            border-left: 3px solid var(--gold);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .radio-label input {
+            accent-color: var(--navy);
+        }
+
+        /* ── CHARTS ── */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 18px;
+        }
+
+        .chart-box {
+            background: var(--surface);
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+
+        .chart-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 16px;
+        }
+
+        canvas {
+            max-height: 240px;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-title {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--text);
+            margin-bottom: 6px;
+        }
+
+        .empty-sub {
+            font-size: 14px;
+        }
+
+        /* ── TOAST ── */
+        .toast-container {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            background: var(--navy-dark);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .25);
+            animation: toast-in .25s ease;
+            border-left: 4px solid var(--gold);
+            max-width: 320px;
+        }
+
+        .toast.success {
+            border-left-color: #4ade80;
+        }
+
+        .toast.error {
+            border-left-color: var(--red);
+        }
+
+        /* ── CUSTOM CONFIRM DIALOG ── */
+        .confirm-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 29, 61, .5);
+            z-index: 9000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            animation: confirm-bg-in .18s ease;
+        }
+
+        @keyframes confirm-bg-in {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .confirm-box {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 32px 32px 24px;
+            max-width: 380px;
+            width: 90%;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .22);
+            animation: confirm-in .22s cubic-bezier(.34, 1.56, .64, 1);
+            text-align: center;
+        }
+
+        @keyframes confirm-in {
+            from {
+                opacity: 0;
+                transform: scale(.88) translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .confirm-icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin: 0 auto 16px;
+        }
+
+        .confirm-icon.danger {
+            background: var(--red-pale);
+        }
+
+        .confirm-icon.warn {
+            background: var(--gold-pale);
+        }
+
+        .confirm-title {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 8px;
+        }
+
+        .confirm-msg {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.5;
+            margin-bottom: 24px;
+        }
+
+        .confirm-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        @keyframes toast-in {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* ── BADGE ── */
+        .badge {
+            display: inline-block;
+            background: var(--gold);
+            color: #fff;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+        }
+
+        /* ── REPORT SPECIFIC ── */
+        .report-month-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .month-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .month-card:hover,
+        .month-card.active {
+            border-color: var(--navy);
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .month-card.active .month-name {
+            color: rgba(255, 255, 255, .7);
+        }
+
+        .month-name {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .8px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .month-count {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--navy);
+        }
+
+        .month-card:hover .month-count,
+        .month-card.active .month-count {
+            color: #fff;
+        }
+
+        /* ── DETAIL VIEW ── */
+        .detail-header {
+            background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy-light) 100%);
+            color: #fff;
+            padding: 24px 28px;
+            border-radius: 14px;
+            margin-bottom: 20px;
+        }
+
+        .detail-name {
+            font-family: 'Barlow Condensed', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .detail-meta {
+            display: flex;
+            gap: 20px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .detail-meta-item {
+            font-size: 13px;
+            color: rgba(255, 255, 255, .7);
+        }
+
+        .detail-meta-item span {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .detail-field {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .detail-field-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .6px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+        }
+
+        .detail-field-value {
+            font-size: 14px;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        /* ── PAGINATION ── */
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+
+        .page-btn {
+            width: 32px;
+            height: 32px;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all .15s;
+        }
+
+        .page-btn:hover,
+        .page-btn.active {
+            border-color: var(--navy);
+            background: var(--navy);
+            color: #fff;
+        }
+
+        .page-info {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0 4px;
+        }
+
+        /* ── HIDDEN ── */
+        .hidden {
+            display: none !important;
+        }
+
+        /* ── DIVIDER ── */
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 20px 0;
+        }
+
+        /* ── PENSIONADO DETAIL ── */
+        .pens-detail-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 29, 61, .55);
+            z-index: 500;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 24px 16px;
+            overflow-y: auto;
+            backdrop-filter: blur(2px);
+        }
+
+        .pens-detail-modal {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 900px;
+            margin: auto;
+            animation: modal-in .2s ease;
+        }
+
+        /* ── RESPONSIVE (minimal) ── */
+        @media (max-width: 768px) {
+
+            .form-grid,
+            .form-grid-3,
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-logo">
+                <div class="brand-icon" style="background:#fff;padding:3px;overflow:hidden"><svg
+                        xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="40"
+                        height="40" viewBox="0 0 1069.627319 1069.231812">
+                        <metadata id="metadata25">
+                            <rdf:RDF>
+                                <cc:Work rdf:about="">
+                                    <dc:format>image/svg+xml</dc:format>
+                                    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+                                </cc:Work>
+                            </rdf:RDF>
+                        </metadata>
+                        <defs id="defs23" />
+                        <sodipodi:namedview pagecolor="#ffffff" bordercolor="#666666" borderopacity="1"
+                            objecttolerance="10" gridtolerance="10" guidetolerance="10" inkscape:pageopacity="0"
+                            inkscape:pageshadow="2" inkscape:window-width="1360" inkscape:window-height="705"
+                            id="namedview21" showgrid="false" inkscape:zoom="0.48174739" inkscape:cx="534.85053"
+                            inkscape:cy="534.6875" inkscape:window-x="-8" inkscape:window-y="-8"
+                            inkscape:window-maximized="1" inkscape:current-layer="Contours"
+                            inkscape:document-rotation="0" />
+                        <desc id="desc2">
+                        </desc>
+                        <g aria-label="IVSS" transform="scale(0.98003656,1.0203701)" id="text852"
+                            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:88.3861px;line-height:1.25;font-family:'Neue Haas Grotesk Display Pro';-inkscape-font-specification:'Neue Haas Grotesk Display Pro';fill:#001b68;fill-opacity:1;stroke:none;stroke-width:2.20966">
+                            <path d="m 275.70093,317.25827 v -63.19606 h 18.4727 v 63.19606 z"
+                                style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Neue Haas Grotesk Display Pro';-inkscape-font-specification:'Neue Haas Grotesk Display Pro';fill:#001b68;fill-opacity:1;stroke-width:2.20966"
+                                id="path840" />
+                            <path
+                                d="m 317.77255,317.25827 -20.24041,-63.19606 h 19.00301 l 8.66184,29.69773 3.09351,12.28567 h 0.17677 q 1.59095,-6.89412 3.09352,-12.28567 l 8.48506,-29.69773 h 18.73786 l -20.32881,63.19606 z"
+                                style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Neue Haas Grotesk Display Pro';-inkscape-font-specification:'Neue Haas Grotesk Display Pro';fill:#001b68;fill-opacity:1;stroke-width:2.20966"
+                                id="path842" />
+                            <path
+                                d="m 386.71348,318.76083 q -12.90437,0 -20.94751,-5.56832 -8.04313,-5.56832 -8.21991,-16.08627 h 18.91463 q 0.88386,7.42443 10.60633,7.42443 3.1819,0 5.56833,-1.2374 2.47481,-1.3258 2.47481,-3.97738 0,-2.91674 -4.15415,-4.50769 -1.85611,-0.70709 -7.86636,-2.20965 -4.06576,-0.97225 -6.62896,-1.76772 -2.5632,-0.79548 -6.09864,-2.38643 -3.53545,-1.67933 -5.65671,-3.53544 -2.03288,-1.9445 -3.53545,-5.03801 -1.50256,-3.09351 -1.50256,-6.9825 0,-10.25279 7.24766,-15.11403 7.24766,-4.86123 18.82624,-4.86123 6.89412,0 12.37405,1.85611 5.47994,1.85611 9.19216,6.3638 3.71221,4.4193 3.8006,11.04826 h -18.29592 q -0.88386,-5.65671 -8.04314,-5.65671 -3.00512,0 -4.94962,1.2374 -1.94449,1.23741 -1.94449,3.1819 0,0.61871 0.17677,1.14902 0.17677,0.44193 0.6187,0.88386 0.44193,0.44193 0.88386,0.79548 0.53032,0.35354 1.41418,0.70709 0.88386,0.26516 1.59095,0.53031 0.79548,0.26516 2.12127,0.61871 1.32579,0.26516 2.29804,0.53031 1.06063,0.26516 2.73996,0.61871 1.67934,0.35354 3.00513,0.70708 4.59608,1.14902 7.86636,2.47482 3.27029,1.2374 6.54058,3.53544 3.35867,2.20965 5.038,5.83348 1.76773,3.53545 1.76773,8.3083 0,9.98763 -7.77798,15.55595 -7.68959,5.56832 -19.44494,5.56832 z"
+                                style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Neue Haas Grotesk Display Pro';-inkscape-font-specification:'Neue Haas Grotesk Display Pro';fill:#001b68;fill-opacity:1;stroke-width:2.20966"
+                                id="path844" />
+                            <path
+                                d="m 445.75516,318.76083 q -12.90437,0 -20.9475,-5.56832 -8.04314,-5.56832 -8.21991,-16.08627 h 18.91463 q 0.88386,7.42443 10.60633,7.42443 3.1819,0 5.56832,-1.2374 2.47481,-1.3258 2.47481,-3.97738 0,-2.91674 -4.15414,-4.50769 -1.85611,-0.70709 -7.86637,-2.20965 -4.06576,-0.97225 -6.62895,-1.76772 -2.5632,-0.79548 -6.09864,-2.38643 -3.53545,-1.67933 -5.65672,-3.53544 -2.03288,-1.9445 -3.53544,-5.03801 -1.50256,-3.09351 -1.50256,-6.9825 0,-10.25279 7.24766,-15.11403 7.24766,-4.86123 18.82624,-4.86123 6.89411,0 12.37405,1.85611 5.47994,1.85611 9.19216,6.3638 3.71221,4.4193 3.8006,11.04826 H 451.8538 q -0.88386,-5.65671 -8.04313,-5.65671 -3.00513,0 -4.94962,1.2374 -1.9445,1.23741 -1.9445,3.1819 0,0.61871 0.17678,1.14902 0.17677,0.44193 0.6187,0.88386 0.44193,0.44193 0.88386,0.79548 0.53032,0.35354 1.41418,0.70709 0.88386,0.26516 1.59095,0.53031 0.79547,0.26516 2.12126,0.61871 1.3258,0.26516 2.29804,0.53031 1.06064,0.26516 2.73997,0.61871 1.67934,0.35354 3.00513,0.70708 4.59608,1.14902 7.86636,2.47482 3.27029,1.2374 6.54057,3.53544 3.35868,2.20965 5.03801,5.83348 1.76772,3.53545 1.76772,8.3083 0,9.98763 -7.77797,15.55595 -7.68959,5.56832 -19.44495,5.56832 z"
+                                style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Neue Haas Grotesk Display Pro';-inkscape-font-specification:'Neue Haas Grotesk Display Pro';fill:#001b68;fill-opacity:1;stroke-width:2.20966"
+                                id="path846" />
+                        </g>
+                        <path
+                            d="M561.3 1069.2 C544.2 1069.2 527.0 1069.2 509.6 1069.0 C509.3 1022.0 509.3 975.3 509.4 928.6 C509.5 924.1 508.1 923.1 503.8 923.1 C488.3 923.4 472.8 923.2 457.3 923.2 C451.2 923.2 450.4 922.2 451.3 916.3 C452.5 908.6 453.4 900.8 454.3 893.1 C455.1 886.5 455.6 880.0 456.4 873.4 C457.6 862.6 459.1 851.8 460.3 841.1 C461.1 834.7 461.6 828.3 462.4 821.9 C463.6 811.8 465.1 801.7 466.3 791.5 C467.2 784.2 467.5 776.8 468.4 769.4 C469.9 756.2 471.7 743.1 473.3 730.0 C474.1 723.4 474.6 716.8 475.4 710.3 C476.6 700.0 478.1 689.7 479.3 679.4 C480.2 672.1 480.5 664.6 481.4 657.3 C482.6 646.8 484.0 636.4 485.4 625.9 C486.3 619.2 487.4 612.4 488.3 605.7 C489.1 600.1 489.7 594.6 490.3 589.0 C490.4 588.1 490.0 587.2 489.8 586.2 C489.0 586.9 487.8 587.3 487.4 588.2 C478.6 604.6 465.7 617.9 453.3 631.5 C445.0 640.7 435.5 648.9 425.9 657.0 C416.0 665.3 405.0 672.6 391.9 674.8 C385.6 675.9 385.3 678.5 385.3 683.5 C385.4 803.1 385.3 922.8 385.3 1042.5 C385.3 1048.0 384.7 1048.4 379.1 1046.5 C361.6 1040.4 344.1 1034.5 326.8 1028.0 C322.9 1026.5 317.7 1025.1 317.4 1019.3 C317.0 1013.9 316.7 1008.5 316.3 1003.2 C316.0 998.7 315.7 994.1 315.3 989.6 C314.0 975.0 312.7 960.4 311.4 945.8 C311.0 941.6 310.7 937.4 310.3 933.2 C309.0 919.9 307.6 906.6 306.4 893.3 C305.6 884.5 305.1 875.5 304.3 866.7 C303.1 853.5 301.5 840.4 300.4 827.3 C300.1 823.5 298.6 822.2 295.0 822.2 C285.8 822.3 276.6 822.4 267.5 822.2 C262.7 822.0 261.3 823.9 261.3 828.6 C261.4 881.1 261.3 933.6 261.4 986.1 C261.4 987.4 261.6 988.7 261.6 990.0 C261.6 991.2 261.4 992.5 261.3 993.7 C260.1 993.5 258.6 993.6 257.6 992.9 C248.3 986.8 238.8 980.9 229.9 974.2 C211.9 960.6 193.8 947.2 176.6 932.7 C164.6 922.5 153.6 911.0 143.1 899.2 C129.1 883.6 115.7 867.4 102.7 851.0 C86.3 830.0 72.5 807.3 60.3 783.6 C55.0 773.3 49.8 762.9 45.1 752.4 C39.9 740.6 34.8 728.6 30.4 716.5 C18.9 684.6 9.6 652.1 5.4 618.3 C3.3 601.4 1.0 584.4 0.6 567.4 C0.0 541.2 0.9 515.0 1.4 488.8 C1.6 480.1 2.3 471.3 3.4 462.7 C5.1 450.5 6.7 438.2 9.5 426.2 C13.9 407.0 18.7 387.8 24.4 368.9 C32.1 342.8 42.3 317.7 55.3 293.7 C63.7 278.3 71.3 262.5 80.6 247.7 C98.6 219.1 119.3 192.5 142.4 167.8 C152.1 157.5 162.4 147.5 173.1 138.2 C187.7 125.5 202.4 112.9 217.9 101.5 C233.8 89.8 250.5 79.0 267.4 68.9 C281.3 60.7 296.0 53.5 310.6 46.6 C323.6 40.6 336.9 35.3 350.4 30.3 C373.7 21.7 397.4 14.2 422.0 10.1 C438.9 7.2 455.8 3.6 472.8 1.4 C484.4 0.0 496.2 0.5 507.9 0.3 C512.8 0.1 517.7 0.2 522.6 0.2 C531.4 0.2 540.1 0.1 548.9 0.3 C563.4 0.5 578.0 0.8 592.5 1.3 C597.0 1.4 601.6 1.5 606.1 2.3 C618.3 4.4 630.6 6.5 642.7 9.3 C660.7 13.5 678.9 17.4 696.4 23.2 C717.5 30.1 738.1 38.3 758.5 47.1 C780.8 56.8 802.0 68.8 822.6 82.0 C847.9 98.1 871.8 116.3 893.9 136.5 C907.7 149.2 920.7 162.7 933.1 176.8 C946.0 191.4 958.6 206.6 969.8 222.5 C982.8 241.1 995.3 260.1 1006.1 280.0 C1022.7 310.3 1036.3 342.1 1046.0 375.4 C1050.0 389.3 1054.2 403.1 1057.2 417.2 C1060.6 433.7 1063.1 450.3 1065.2 466.9 C1067.2 482.4 1068.8 498.1 1069.2 513.7 C1069.6 532.8 1068.7 551.9 1068.3 571.0 C1068.2 576.9 1068.0 582.8 1067.3 588.6 C1065.5 602.3 1063.7 616.0 1061.2 629.6 C1059.1 641.7 1056.4 653.8 1053.2 665.7 C1049.3 680.7 1045.2 695.7 1040.2 710.3 C1036.0 722.7 1030.9 734.8 1025.3 746.6 C1015.2 767.7 1005.4 788.9 993.6 809.0 C982.7 827.5 969.7 845.0 956.6 862.1 C945.3 876.9 932.9 890.9 920.3 904.6 C910.2 915.5 899.2 925.6 888.2 935.7 C881.1 942.2 873.4 948.1 865.9 954.2 C864.1 955.6 862.9 956.6 862.2 952.9 C860.9 945.4 859.0 938.0 857.2 930.6 C853.6 915.7 849.8 900.9 846.4 886.0 C841.2 863.3 836.4 840.5 831.3 817.8 C827.8 801.9 824.0 786.1 820.3 770.3 C815.3 748.7 810.4 727.1 805.2 705.6 C804.8 703.9 802.9 702.7 801.7 701.2 C800.2 702.6 797.7 703.8 797.5 705.4 C796.2 714.6 795.2 723.8 794.4 733.1 C793.8 739.4 793.9 745.8 793.3 752.2 C792.1 764.5 790.5 776.7 789.4 789.0 C788.5 798.9 788.2 808.8 787.3 818.7 C786.2 830.7 784.6 842.6 783.4 854.5 C782.2 865.6 781.3 876.7 780.3 887.8 C779.0 902.9 777.7 918.0 776.3 933.1 C775.4 943.7 774.2 954.3 773.4 964.9 C772.3 978.3 771.4 991.7 770.3 1005.1 C769.9 1011.1 768.9 1015.9 761.8 1018.6 C747.9 1023.7 734.4 1030.4 720.6 1036.2 C713.4 1039.2 713.3 1038.8 713.3 1030.9 C713.7 985.5 714.0 940.1 714.3 894.7 C714.7 849.6 715.0 804.6 715.3 759.6 C715.7 713.8 716.0 668.0 716.4 622.2 C716.6 596.6 717.0 571.1 717.3 545.6 C717.3 544.5 716.3 543.4 715.8 542.2 C715.1 542.6 714.4 542.8 713.8 543.3 C710.5 546.2 707.5 549.4 704.0 552.0 C679.0 570.7 651.5 583.0 619.8 584.4 C618.6 584.4 616.6 586.5 616.5 587.7 C616.3 591.0 617.0 594.4 617.3 597.7 C618.3 607.1 619.2 616.6 620.4 626.0 C621.9 638.3 623.7 650.6 625.3 662.9 C626.1 669.1 626.6 675.4 627.4 681.6 C628.6 691.2 630.1 700.8 631.3 710.4 C632.1 716.8 632.5 723.2 633.4 729.6 C634.9 741.2 636.8 752.9 638.3 764.5 C639.2 770.9 639.5 777.3 640.4 783.7 C641.6 793.0 643.1 802.2 644.3 811.5 C645.2 818.4 645.5 825.3 646.4 832.2 C647.9 844.0 649.7 855.8 651.3 867.6 C652.1 873.8 652.6 880.1 653.4 886.3 C654.6 896.9 655.9 907.5 657.4 918.1 C658.0 922.5 656.0 923.3 652.1 923.3 C631.1 923.1 610.1 923.4 589.1 923.1 C584.5 923.1 583.2 924.2 583.2 928.9 C583.4 972.4 583.3 1015.9 583.3 1059.4 C583.3 1060.4 583.5 1061.4 583.3 1062.4 C582.8 1065.1 582.0 1067.4 578.2 1067.3 C573.0 1067.2 567.8 1067.9 562.6 1068.3 C562.2 1068.3 561.8 1068.9 561.3 1069.2 M116.3 325.7 C108.3 345.1 99.7 364.2 92.5 383.9 C84.5 406.1 78.5 428.9 75.4 452.3 C72.9 470.5 69.3 488.7 68.7 506.9 C67.9 530.6 66.8 554.4 70.3 578.1 C72.4 592.2 73.8 606.5 76.5 620.6 C79.5 636.0 83.1 651.4 87.3 666.6 C95.5 695.8 106.9 723.8 121.4 750.4 C127.2 761.1 133.2 771.6 139.6 781.9 C154.3 805.9 171.9 827.7 190.4 848.9 C190.9 849.4 191.6 849.8 192.3 850.2 C192.6 849.5 193.2 848.8 193.3 848.0 C195.8 835.8 198.2 823.7 200.6 811.5 C203.2 798.5 207.1 785.9 206.6 772.2 C205.7 747.6 206.3 722.9 206.4 698.2 C206.4 696.3 206.9 694.5 207.4 692.6 C208.9 686.1 206.4 679.7 201.0 676.4 C192.7 671.3 184.0 666.9 176.3 661.1 C161.5 649.9 146.8 638.3 132.9 626.0 C125.1 619.0 118.5 610.5 112.0 602.2 C103.5 591.2 95.8 579.6 91.5 566.3 C88.2 556.1 85.9 545.5 83.4 535.1 C82.0 529.1 84.0 526.7 89.3 526.7 C100.6 526.9 111.9 527.1 123.2 527.2 C130.2 527.3 137.3 528.0 144.1 527.0 C150.1 526.1 152.6 528.3 154.8 533.1 C162.5 549.4 172.6 564.4 184.6 577.7 C196.8 591.3 210.5 603.1 226.6 612.5 C247.8 624.9 270.7 630.4 294.8 631.0 C304.8 631.3 314.8 629.4 324.7 628.2 C340.4 626.3 354.8 620.8 368.5 613.2 C387.4 602.8 402.8 588.4 415.2 570.9 C428.1 552.7 437.4 532.8 443.1 511.4 C444.6 505.9 446.6 504.1 452.1 504.1 C499.0 504.3 545.8 504.2 592.6 504.2 C594.5 504.2 596.5 504.0 598.2 503.2 C605.4 499.7 612.6 496.2 619.7 492.3 C636.3 483.3 650.3 471.0 661.3 455.7 C671.4 441.7 677.7 426.2 678.3 408.8 C678.5 402.8 678.9 402.2 684.8 402.2 C752.1 402.2 819.4 402.3 886.8 402.1 C891.0 402.1 892.4 403.0 892.5 407.5 C893.5 496.6 889.8 585.7 894.4 674.7 C894.7 681.6 895.5 688.5 896.4 695.4 C897.9 707.9 899.8 720.3 901.3 732.8 C902.2 739.7 902.5 746.6 903.4 753.5 C904.6 763.1 906.2 772.7 907.3 782.3 C908.2 790.4 908.6 798.5 909.4 806.5 C909.5 807.4 910.2 808.2 910.6 809.0 C911.2 808.4 911.9 807.9 912.3 807.2 C913.5 805.3 914.4 803.4 915.6 801.5 C924.8 786.7 934.7 772.2 943.2 757.0 C954.9 735.9 965.4 714.2 972.7 691.2 C979.1 671.0 985.1 650.6 990.1 630.0 C993.3 616.7 994.7 603.0 996.3 589.5 C998.0 574.8 999.5 560.0 1000.2 545.1 C1000.7 534.8 999.8 524.4 999.3 514.1 C998.8 504.2 998.4 494.2 997.2 484.4 C995.6 470.9 994.0 457.3 991.2 443.9 C987.6 426.9 983.6 409.8 978.6 393.2 C970.1 365.4 959.3 338.5 944.8 313.2 C937.7 300.9 931.2 288.3 923.0 276.7 C910.8 259.3 898.0 242.1 884.1 225.9 C872.9 212.8 860.3 200.8 847.5 189.1 C835.2 178.0 822.1 167.8 809.1 157.6 C790.1 142.7 769.6 130.0 748.0 119.3 C732.2 111.5 716.3 104.0 700.0 97.6 C684.4 91.6 668.4 86.8 652.3 82.4 C640.7 79.2 628.7 77.3 616.8 75.2 C604.0 73.0 591.1 70.9 578.2 69.3 C568.9 68.2 559.5 67.5 550.1 67.3 C538.2 67.2 526.3 67.7 514.5 68.3 C501.5 69.0 488.6 70.0 475.7 71.3 C465.7 72.3 455.7 73.4 445.9 75.4 C435.2 77.5 424.8 80.7 414.2 83.2 C388.5 89.3 363.8 98.3 340.0 109.4 C305.9 125.3 273.7 144.5 244.5 168.5 C227.1 182.8 209.6 196.9 195.0 214.1 C182.8 228.5 170.3 242.7 158.7 257.6 C142.2 278.5 128.7 301.4 116.3 325.7 "
+                            fill="#000000" stroke="none" id="path4" style="fill:#001b68;fill-opacity:1" />
+                        <path
+                            d="M850.3 303.2 C850.2 320.2 844.4 334.7 834.5 347.6 C822.7 363.0 806.7 371.7 788.0 375.1 C768.2 378.6 749.8 373.7 733.2 362.5 C716.7 351.4 706.7 335.5 702.6 316.5 C699.4 301.5 700.9 286.4 707.3 272.0 C716.3 252.0 730.9 238.0 751.5 230.8 C768.2 224.9 785.3 225.2 802.2 231.5 C817.0 237.0 828.4 246.7 837.5 259.1 C843.8 267.7 847.8 277.5 849.3 288.2 C849.9 293.0 850.0 297.9 850.3 303.2 "
+                            fill="#000000" stroke="none" id="path6" style="fill:#001b68;fill-opacity:1" />
+                        <path
+                            d="M374.3 493.2 C374.4 506.8 374.7 519.7 369.5 532.2 C364.6 543.8 357.5 553.7 348.2 561.8 C340.1 568.7 330.6 573.4 320.2 576.3 C303.7 580.9 287.8 580.0 271.9 573.4 C248.8 563.8 234.1 546.5 227.8 522.9 C221.7 499.9 226.6 478.2 241.1 459.0 C252.0 444.4 266.8 435.5 284.0 431.5 C295.7 428.7 307.9 429.0 319.7 432.3 C332.9 436.0 344.8 442.6 354.1 452.7 C364.2 463.7 371.7 476.3 373.4 491.6 C373.4 492.0 374.0 492.4 374.3 493.2 "
+                            fill="#000000" stroke="none" id="path8" style="fill:#001b68;fill-opacity:1" />
+                        <path
+                            d="M478.3 354.2 C485.8 340.1 496.5 329.4 510.0 322.5 C523.8 315.4 538.8 312.6 554.7 315.0 C566.9 316.9 577.8 321.2 587.8 328.2 C602.1 338.2 611.5 351.9 616.3 368.6 C621.0 385.1 619.9 401.4 613.4 417.3 C609.6 426.5 604.3 434.8 597.3 441.6 C585.8 452.7 572.2 459.9 556.0 462.3 C534.7 465.5 515.5 460.8 498.8 447.9 C484.3 436.6 474.3 421.7 471.4 403.0 C468.8 386.2 469.7 369.9 478.3 354.2 "
+                            fill="#000000" stroke="none" id="path10" style="fill:#001b68;fill-opacity:1" />
+
+
+
+
+
+                    </svg></div>
+                <div>
+                    <div class="brand-title">IVSS</div>
+                    <div class="brand-title" style="font-size:14px;font-weight:600;color:var(--gold-light)">OA CABIMAS
+                    </div>
+                </div>
+            </div>
+            <div class="brand-sub">Sistema de Atención · 2026</div>
+        </div>
+        <div class="sidebar-nav">
+            <div class="nav-section-label">Principal</div>
+            <div class="nav-item active" onclick="navigate('dashboard')">
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <rect x="3" y="12" width="4" height="9" />
+                        <rect x="10" y="6" width="4" height="15" />
+                        <rect x="17" y="2" width="4" height="19" />
+                    </svg></span> Dashboard
+            </div>
+            <div class="nav-section-label">Módulos</div>
+            <div class="nav-item" onclick="navigate('atencion')">
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                        <line x1="9" y1="12" x2="15" y2="12" />
+                        <line x1="9" y1="16" x2="13" y2="16" />
+                    </svg></span> Atención al Público
+            </div>
+            <div class="nav-item" onclick="navigate('pensionados')">
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg></span> Censo de Pensionados
+            </div>
+            <div class="nav-section-label">Análisis</div>
+            <div class="nav-item" onclick="navigate('reportes')">
+                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                        <polyline points="17 6 23 6 23 12" />
+                    </svg></span> Reportes y Estadísticas
+            </div>
+        </div>
+        <div class="sidebar-footer">
+            IVSS · CABIMAS, ZULIA
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <div class="main">
+        <div class="topbar">
+            <div class="topbar-title" id="topbar-title">Dashboard</div>
+            <div class="topbar-right">
+                <div class="topbar-date" id="topbar-date"></div>
+            </div>
+        </div>
+        <div class="content" id="content"></div>
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ================================================================
+     TEMPLATES (hidden)
+================================================================ -->
+
+    <!-- DASHBOARD TEMPLATE -->
+    <template id="tpl-dashboard">
+        <div>
+            <div class="section-header">
+                <div>
+                    <div class="section-title">Panel General</div>
+                    <div class="section-sub">Resumen de atención · Oficina Administrativa Cabimas 2026</div>
+                </div>
+            </div>
+            <div class="stat-grid" id="dash-stats"></div>
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <div class="chart-title">Atendidos por Mes · 2026</div>
+                    <canvas id="chart-monthly"></canvas>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Distribución por Tipo de Servicio</div>
+                    <canvas id="chart-services"></canvas>
+                </div>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <div class="chart-title">Pensionados por Género</div>
+                    <canvas id="chart-gender"></canvas>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Pensionados por Tipo de Pensión</div>
+                    <canvas id="chart-pension"></canvas>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- ATENCIÓN TEMPLATE -->
+    <template id="tpl-atencion">
+        <div>
+            <div class="section-header">
+                <div>
+                    <div class="section-title">Atención al Público</div>
+                    <div class="section-sub">Registro diario de usuarios atendidos por servicio</div>
+                </div>
+                <button class="btn btn-primary" onclick="openAtencionModal()">+ Registrar Atención</button>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Registros de Atención</div>
+                    <div class="filters-row" style="margin:0">
+                        <input class="filter-input" type="text" id="aten-search" placeholder="Buscar nombre o cédula…"
+                            oninput="renderAtencionTable()">
+                        <select class="filter-input" id="aten-filter-mes" onchange="renderAtencionTable()">
+                            <option value="">Todos los meses</option>
+                        </select>
+                        <select class="filter-input" id="aten-filter-servicio" onchange="renderAtencionTable()">
+                            <option value="">Todos los servicios</option>
+                            <option value="AFILIACION">Afiliación</option>
+                            <option value="PRESTACIONES">Prestaciones</option>
+                            <option value="RECAUDACION_COBRANZA">Recaudación y Cobranza</option>
+                            <option value="ATENCION_CESANTE">At. Trab. Cesante</option>
+                            <option value="FISCALIZACION">Fiscalización</option>
+                            <option value="OTRAS_ATENCIONES">Otras Atenciones</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Fecha</th>
+                                <th>Nombres y Apellidos</th>
+                                <th>Cédula</th>
+                                <th>Teléfono</th>
+                                <th>Servicio</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="aten-tbody"></tbody>
+                    </table>
+                </div>
+                <div
+                    style="padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)">
+                    <span id="aten-count" style="font-size:13px;color:var(--text-muted)"></span>
+                    <div class="pagination" id="aten-pagination"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- PENSIONADOS TEMPLATE -->
+    <template id="tpl-pensionados">
+        <div>
+            <div class="section-header">
+                <div>
+                    <div class="section-title">Censo de Pensionados</div>
+                    <div class="section-sub">Registro detallado de pensionados y pensionadas atendidos</div>
+                </div>
+                <button class="btn btn-primary" onclick="openPensionadoModal()">+ Registrar Pensionado</button>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Padrón de Pensionados</div>
+                    <div class="filters-row" style="margin:0">
+                        <input class="filter-input" type="text" id="pens-search" placeholder="Buscar nombre o cédula…"
+                            oninput="renderPensTable()">
+                        <select class="filter-input" id="pens-filter-mes" onchange="renderPensTable()">
+                            <option value="">Todos los meses</option>
+                        </select>
+                        <select class="filter-input" id="pens-filter-genero" onchange="renderPensTable()">
+                            <option value="">Todos los géneros</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                        </select>
+                        <select class="filter-input" id="pens-filter-pension" onchange="renderPensTable()">
+                            <option value="">Todos los tipos</option>
+                            <option value="TRABAJO">Trabajo</option>
+                            <option value="INVALIDEZ">Invalidez</option>
+                            <option value="AMOR MAYOR">Amor Mayor</option>
+                            <option value="VIA DE GRACIAS">Vía de Gracias</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nombres y Apellidos</th>
+                                <th>Cédula</th>
+                                <th>Edad</th>
+                                <th>Género</th>
+                                <th>Tipo Pensión</th>
+                                <th>Banco</th>
+                                <th>Mes</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pens-tbody"></tbody>
+                    </table>
+                </div>
+                <div
+                    style="padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border)">
+                    <span id="pens-count" style="font-size:13px;color:var(--text-muted)"></span>
+                    <div class="pagination" id="pens-pagination"></div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- REPORTES TEMPLATE -->
+    <template id="tpl-reportes">
+        <div>
+            <div class="section-header">
+                <div>
+                    <div class="section-title">Reportes y Estadísticas</div>
+                    <div class="section-sub">Análisis global de atención al usuario · Enero–Diciembre 2026</div>
+                </div>
+            </div>
+            <div class="card" style="margin-bottom:18px">
+                <div class="card-header">
+                    <div class="card-title">Resumen Anual por Mes</div>
+                </div>
+                <div class="card-body">
+                    <div class="report-month-grid" id="rep-month-grid"></div>
+                </div>
+            </div>
+            <div class="charts-grid">
+                <div class="chart-box">
+                    <div class="chart-title">Servicios por Mes</div>
+                    <canvas id="rep-chart-stacked"></canvas>
+                </div>
+                <div class="chart-box">
+                    <div class="chart-title">Pensionados Atendidos por Mes</div>
+                    <canvas id="rep-chart-pens"></canvas>
+                </div>
+            </div>
+            <div class="card" style="margin-top:18px">
+                <div class="card-header">
+                    <div class="card-title">Tabla Resumen Mensual · Atención al Público</div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mes</th>
+                                <th>Total Atendidos</th>
+                                <th>Afiliación</th>
+                                <th>Prestaciones</th>
+                                <th>Recaud. Cobranza</th>
+                                <th>At. Cesante</th>
+                                <th>Fiscalización</th>
+                                <th>Otras</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rep-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- MODAL ATENCIÓN -->
+    <div id="modal-atencion" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-aten-title">Registrar Atención</div>
+                <button class="modal-close" onclick="closeAtencionModal()"><svg xmlns="http://www.w3.org/2000/svg"
+                        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Fecha *</label>
+                        <input class="form-input" type="date" id="af-fecha">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Servicio *</label>
+                        <select class="form-select" id="af-servicio">
+                            <option value="">Seleccionar…</option>
+                            <option value="AFILIACION">Afiliación</option>
+                            <option value="PRESTACIONES">Prestaciones</option>
+                            <option value="RECAUDACION_COBRANZA">Recaudación y Cobranza</option>
+                            <option value="ATENCION_CESANTE">Atención al Trabajador Cesante</option>
+                            <option value="FISCALIZACION">Fiscalización</option>
+                            <option value="OTRAS_ATENCIONES">Otras Atenciones</option>
+                        </select>
+                    </div>
+                    <div class="form-group form-full">
+                        <label class="form-label">Nombres y Apellidos *</label>
+                        <input class="form-input" type="text" id="af-nombre" placeholder="Nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cédula de Identidad *</label>
+                        <input class="form-input" type="text" id="af-cedula" placeholder="Ej: 7862369">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input class="form-input" type="text" id="af-telefono" placeholder="Ej: 0412-1234567">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeAtencionModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="saveAtencion()">Guardar Registro</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PENSIONADO -->
+    <div id="modal-pensionado" class="modal-overlay hidden">
+        <div class="modal" style="max-width:860px">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-pens-title">Registrar Pensionado</div>
+                <button class="modal-close" onclick="closePensionadoModal()"><svg xmlns="http://www.w3.org/2000/svg"
+                        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg></button>
+            </div>
+            <div class="modal-body">
+                <!-- DATOS PERSONALES -->
+                <div class="form-section-title"><span
+                        style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="#c8922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                            <line x1="9" y1="12" x2="15" y2="12" />
+                            <line x1="9" y1="16" x2="13" y2="16" />
+                        </svg> Datos Personales</span></div>
+                <div class="form-grid">
+                    <div class="form-group form-full">
+                        <label class="form-label">Nombre y Apellido *</label>
+                        <input class="form-input" type="text" id="pf-nombre" placeholder="Nombre completo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Cédula de Identidad *</label>
+                        <input class="form-input" type="text" id="pf-cedula" placeholder="Ej: 7480674">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Edad</label>
+                        <input class="form-input" type="number" id="pf-edad" placeholder="Años">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha de Nacimiento</label>
+                        <input class="form-input" type="date" id="pf-fnac">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Género *</label>
+                        <select class="form-select" id="pf-genero">
+                            <option value="">Seleccionar…</option>
+                            <option value="M">Masculino</option>
+                            <option value="F">Femenino</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Teléfono</label>
+                        <input class="form-input" type="text" id="pf-telefono">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Mes de Atención *</label>
+                        <select class="form-select" id="pf-mes">
+                            <option value="">Seleccionar…</option>
+                            <option>ENERO</option>
+                            <option>FEBRERO</option>
+                            <option>MARZO</option>
+                            <option>ABRIL</option>
+                            <option>MAYO</option>
+                            <option>JUNIO</option>
+                            <option>JULIO</option>
+                            <option>AGOSTO</option>
+                            <option>SEPTIEMBRE</option>
+                            <option>OCTUBRE</option>
+                            <option>NOVIEMBRE</option>
+                            <option>DICIEMBRE</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Analista</label>
+                        <input class="form-input" type="text" id="pf-analista" placeholder="Nombre del analista">
+                    </div>
+                </div>
+
+                <!-- DIRECCIÓN -->
+                <div class="form-section-title"><span
+                        style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="#c8922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg> Dirección</span></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        <input class="form-input" type="text" id="pf-estado" value="ZULIA">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Municipio</label>
+                        <input class="form-input" type="text" id="pf-municipio" value="CABIMAS">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Parroquia</label>
+                        <input class="form-input" type="text" id="pf-parroquia">
+                    </div>
+                    <div class="form-group form-full">
+                        <label class="form-label">Dirección Exacta</label>
+                        <input class="form-input" type="text" id="pf-direccion">
+                    </div>
+                </div>
+
+                <!-- DATOS ELECTORALES -->
+                <div class="form-section-title"><span
+                        style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="#c8922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
+                        </svg> Datos Electorales</span></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">¿Inscrito en el CNE?</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-cne" value="SI"
+                                    onclick="toggleCentroVotacion(true)"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-cne" value="NO"
+                                    onclick="toggleCentroVotacion(false)"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Centro de Votación</label>
+                        <input class="form-input" type="text" id="pf-centro-votacion" disabled
+                            style="opacity:.45;cursor:not-allowed">
+                    </div>
+                </div>
+
+                <!-- DATOS DE PENSIÓN -->
+                <div class="form-section-title"><span
+                        style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="#c8922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 6v2m0 8v2m-3-5h6m-6-2h6" />
+                        </svg> Datos de Pensión</span></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">¿Es Pensionado del IVSS?</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-ivss" value="SI"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-ivss" value="NO"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Pensión</label>
+                        <input class="form-input" type="text" id="pf-tipo-pension"
+                            placeholder="Ej: TRABAJO, INVALIDEZ, AMOR MAYOR…">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Banco donde Cobra</label>
+                        <input class="form-input" type="text" id="pf-banco" placeholder="Ej: BNC, MERCANTIL, PATRIA…">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">¿Recibe Beneficio de Alimentación?</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-alim" value="SI"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-alim" value="NO"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">INASS o IVSS</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-inass" value="INASS"> INASS</label>
+                            <label class="radio-label"><input type="radio" name="pf-inass" value="IVSS"> IVSS</label>
+                            <label class="radio-label"><input type="radio" name="pf-inass" value="S/I"> S/I</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre Consejo Comunal</label>
+                        <input class="form-input" type="text" id="pf-consejo">
+                    </div>
+                </div>
+
+                <!-- SALUD -->
+                <div class="form-section-title"><span
+                        style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="#c8922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg> Datos de Salud</span></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">¿Sufre alguna Patología?</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-patol" value="SI"
+                                    onclick="togglePatolFields(true)"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-patol" value="NO"
+                                    onclick="togglePatolFields(false)"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="pf-patol-tipo-group">
+                        <label class="form-label">Tipo de Patología</label>
+                        <input class="form-input" type="text" id="pf-patol-tipo">
+                    </div>
+                    <div class="form-group form-full" id="pf-tratam-group">
+                        <label class="form-label">Tratamiento Crónico</label>
+                        <input class="form-input" type="text" id="pf-tratamiento">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">¿Requiere Medicamentos?</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-meds" value="SI"
+                                    onclick="toggleMedsField(true)"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-meds" value="NO"
+                                    onclick="toggleMedsField(false)"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group" id="pf-meds-tipo-group">
+                        <label class="form-label">Tipo de Medicamentos</label>
+                        <input class="form-input" type="text" id="pf-meds-tipo">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Club de Abuelos</label>
+                        <input class="form-input" type="text" id="pf-club">
+                    </div>
+                </div>
+
+                <!-- SOLICITUDES -->
+                <div class="form-section-title"><span
+                        style="display:inline-flex;align-items:center;gap:8px;vertical-align:middle"><svg
+                            xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="#c8922a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg> Solicitudes</span></div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Solicitud VenApp 1x10</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-venapp" value="SI"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-venapp" value="NO"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">N° Solicitud (si aplica)</label>
+                        <input class="form-input" type="text" id="pf-num-solic">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Solicitud Especial</label>
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-solic-esp" value="SI"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-solic-esp" value="NO"> No</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tipo de Solicitud Especial</label>
+                        <input class="form-input" type="text" id="pf-tipo-solic">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closePensionadoModal()">Cancelar</button>
+                <button class="btn btn-primary" onclick="savePensionado()">Guardar Pensionado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETAIL PENSIONADO -->
+    <div id="modal-pens-detail" class="pens-detail-overlay hidden">
+        <div class="pens-detail-modal">
+            <div class="modal-header">
+                <div class="modal-title">Ficha de Pensionado</div>
+                <button class="modal-close"
+                    onclick="document.getElementById('modal-pens-detail').classList.add('hidden')"><svg
+                        xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg></button>
+            </div>
+            <div class="modal-body" id="pens-detail-body"></div>
+        </div>
+    </div>
+
+
+    <!-- CUSTOM CONFIRM DIALOG -->
+    <div id="confirm-dialog" style="display:none" class="confirm-overlay">
+        <div class="confirm-box">
+            <div class="confirm-icon danger" id="confirm-icon"><svg xmlns="http://www.w3.org/2000/svg" width="26"
+                    height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                    <path d="M9 6V4h6v2" />
+                </svg></div>
+            <div class="confirm-title" id="confirm-title">¿Estás seguro?</div>
+            <div class="confirm-msg" id="confirm-msg">Esta acción no se puede deshacer.</div>
+            <div class="confirm-actions">
+                <button class="btn btn-outline" id="confirm-cancel-btn">Cancelar</button>
+                <button class="btn btn-danger" id="confirm-ok-btn">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================
+     SCRIPT
+================================================================ -->
+    <script>
+        // ── DATA STORE ──────────────────────────────────────────────────────
+        const STORAGE_ATEN = 'ivss_atencion_v2';
+        const STORAGE_PENS = 'ivss_pensionados_v2';
+
+        function loadData(key) {
+            try { return JSON.parse(localStorage.getItem(key)) || []; }
+            catch { return []; }
+        }
+        function saveData(key, data) {
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        let atencionData = loadData(STORAGE_ATEN);
+        let pensionadosData = loadData(STORAGE_PENS);
+        let editAtenId = null;
+        let editPensId = null;
+
+        // ── PAGINATION STATE ─────────────────────────────────────────────────
+        const PAGE_SIZE = 20;
+        let atenPage = 1;
+        let pensPage = 1;
+
+        // ── UTILS ────────────────────────────────────────────────────────────
+        function uuid() {
+            return Date.now().toString(36) + Math.random().toString(36).slice(2);
+        }
+        function fmt_date(d) {
+            if (!d) return '—';
+            const dt = new Date(d + 'T00:00:00');
+            return dt.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        function getMes(dateStr) {
+            if (!dateStr) return '';
+            const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+            return months[new Date(dateStr + 'T00:00:00').getMonth()];
+        }
+        function servTag(s) {
+            const map = {
+                AFILIACION: ['tag-afil', 'Afiliación'],
+                PRESTACIONES: ['tag-prest', 'Prestaciones'],
+                RECAUDACION_COBRANZA: ['tag-recaud', 'Recaud. Cobranza'],
+                ATENCION_CESANTE: ['tag-cesante', 'At. Cesante'],
+                FISCALIZACION: ['tag-fisc', 'Fiscalización'],
+                OTRAS_ATENCIONES: ['tag-otras', 'Otras Atenciones'],
+            };
+            const [cls, label] = map[s] || ['tag-otras', s];
+            return `<span class="tag ${cls}">${label}</span>`;
+        }
+        function genTag(g) {
+            return g === 'M'
+                ? `<span class="tag tag-m">Masc.</span>`
+                : g === 'F' ? `<span class="tag tag-f">Fem.</span>` : '—';
+        }
+
+        // ── TOAST ────────────────────────────────────────────────────────────
+        function toast(msg, type = 'success') {
+            const c = document.getElementById('toast-container');
+            const t = document.createElement('div');
+            t.className = `toast ${type}`;
+            t.textContent = msg;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // ── NAVIGATION ──────────────────────────────────────────────────────
+        let currentView = 'dashboard';
+        function navigate(view) {
+            currentView = view;
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const idx = { dashboard: 0, atencion: 1, pensionados: 2, reportes: 3 };
+            document.querySelectorAll('.nav-item')[idx[view]]?.classList.add('active');
+            const titles = { dashboard: 'Dashboard', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas' };
+            document.getElementById('topbar-title').textContent = titles[view];
+            renderView(view);
+        }
+
+        function renderView(view) {
+            const content = document.getElementById('content');
+            const tpl = document.getElementById(`tpl-${view}`);
+            content.innerHTML = tpl.innerHTML;
+            if (view === 'dashboard') renderDashboard();
+            else if (view === 'atencion') initAtencion();
+            else if (view === 'pensionados') initPensionados();
+            else if (view === 'reportes') renderReportes();
+        }
+
+        // ── DATE DISPLAY ─────────────────────────────────────────────────────
+        function updateDate() {
+            const now = new Date();
+            document.getElementById('topbar-date').textContent =
+                now.toLocaleDateString('es-VE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  DASHBOARD
+        // ══════════════════════════════════════════════════════
+        function renderDashboard() {
+            const totalAten = atencionData.length;
+            const totalPens = pensionadosData.length;
+            const mesActual = getMes(new Date().toISOString().split('T')[0]);
+            const atenMes = atencionData.filter(r => getMes(r.fecha) === mesActual).length;
+            const pensMes = pensionadosData.filter(r => r.mes === mesActual).length;
+
+            document.getElementById('dash-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Total Usuarios Atendidos</div>
+      <div class="stat-value">${totalAten}</div>
+      <div class="stat-sub-text">Registros este año</div>
+    </div>
+    <div class="stat-card gold">
+      <div class="stat-label">Pensionados Registrados</div>
+      <div class="stat-value">${totalPens}</div>
+      <div class="stat-sub-text">Censo de pensionados</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-label">Atendidos Este Mes</div>
+      <div class="stat-value">${atenMes}</div>
+      <div class="stat-sub-text">${mesActual || 'Mes actual'}</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-label">Pensionados Este Mes</div>
+      <div class="stat-value">${pensMes}</div>
+      <div class="stat-sub-text">${mesActual || 'Mes actual'}</div>
+    </div>
+  `;
+            drawDashCharts();
+        }
+
+        const MONTHS = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const NAVY = '#002d5e', GOLD = '#c8922a';
+        const PALETTE = ['#002d5e', '#1a4a8a', '#c8922a', '#e8b04a', '#1a7a4a', '#c0392b'];
+
+        function drawDashCharts() {
+            // Monthly attendance
+            const monthCounts = MONTHS.map(m => atencionData.filter(r => getMes(r.fecha) === m).length);
+            new Chart(document.getElementById('chart-monthly'), {
+                type: 'bar',
+                data: {
+                    labels: MONTHS.map(m => m.slice(0, 3)),
+                    datasets: [{ label: 'Atendidos', data: monthCounts, backgroundColor: NAVY, borderRadius: 6 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f8' } }, x: { grid: { display: false } } } }
+            });
+
+            // Services pie
+            const servKeys = ['AFILIACION', 'PRESTACIONES', 'RECAUDACION_COBRANZA', 'ATENCION_CESANTE', 'FISCALIZACION', 'OTRAS_ATENCIONES'];
+            const servLabels = ['Afiliación', 'Prestaciones', 'Recaud.', 'At. Cesante', 'Fiscalización', 'Otras'];
+            const servCounts = servKeys.map(k => atencionData.filter(r => r.servicio === k).length);
+            new Chart(document.getElementById('chart-services'), {
+                type: 'doughnut',
+                data: { labels: servLabels, datasets: [{ data: servCounts, backgroundColor: PALETTE, borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 12 } } } } }
+            });
+
+            // Gender
+            const gM = pensionadosData.filter(r => r.genero === 'M').length;
+            const gF = pensionadosData.filter(r => r.genero === 'F').length;
+            new Chart(document.getElementById('chart-gender'), {
+                type: 'pie',
+                data: { labels: ['Masculino', 'Femenino'], datasets: [{ data: [gM, gF], backgroundColor: [NAVY, '#be185d'], borderWidth: 2 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+            });
+
+            // Pension type
+            const ptypes = {};
+            pensionadosData.forEach(r => { const k = r.tipoPension || 'Sin datos'; ptypes[k] = (ptypes[k] || 0) + 1; });
+            const ptLabels = Object.keys(ptypes), ptVals = Object.values(ptypes);
+            new Chart(document.getElementById('chart-pension'), {
+                type: 'bar',
+                data: {
+                    labels: ptLabels,
+                    datasets: [{ label: 'Pensionados', data: ptVals, backgroundColor: GOLD, borderRadius: 6 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f8' } }, x: { grid: { display: false }, ticks: { maxRotation: 30 } } } }
+            });
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  ATENCIÓN AL PÚBLICO
+        // ══════════════════════════════════════════════════════
+        function initAtencion() {
+            // populate month filter
+            const sel = document.getElementById('aten-filter-mes');
+            MONTHS.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); });
+            renderAtencionTable();
+        }
+
+        function getFilteredAten() {
+            const search = (document.getElementById('aten-search')?.value || '').toLowerCase();
+            const mes = document.getElementById('aten-filter-mes')?.value || '';
+            const serv = document.getElementById('aten-filter-servicio')?.value || '';
+            return atencionData.filter(r => {
+                const matchS = !search || r.nombre.toLowerCase().includes(search) || r.cedula.includes(search);
+                const matchM = !mes || getMes(r.fecha) === mes;
+                const matchSv = !serv || r.servicio === serv;
+                return matchS && matchM && matchSv;
+            }).sort((a, b) => b.fecha.localeCompare(a.fecha));
+        }
+
+        function renderAtencionTable() {
+            const filtered = getFilteredAten();
+            const total = filtered.length;
+            const pages = Math.ceil(total / PAGE_SIZE);
+            if (atenPage > pages) atenPage = 1;
+            const slice = filtered.slice((atenPage - 1) * PAGE_SIZE, atenPage * PAGE_SIZE);
+
+            const tbody = document.getElementById('aten-tbody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b0b8d0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><div class="empty-title">Sin registros</div><div class="empty-sub">No hay atenciones que coincidan con los filtros aplicados.</div></div></td></tr>`;
+            } else {
+                tbody.innerHTML = slice.map((r, i) => `
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted)">${(atenPage - 1) * PAGE_SIZE + i + 1}</td>
+        <td>${fmt_date(r.fecha)}</td>
+        <td><strong>${r.nombre}</strong></td>
+        <td style="font-family:'IBM Plex Mono',monospace">${r.cedula}</td>
+        <td>${r.telefono || '—'}</td>
+        <td>${servTag(r.servicio)}</td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="editAtencion('${r.id}')">Editar</button>
+          <button class="btn btn-danger btn-sm" style="margin-left:6px" onclick="deleteAtencion('${r.id}')">Eliminar</button>
+        </td>
+      </tr>`).join('');
+            }
+            document.getElementById('aten-count').textContent = `${total} registro${total !== 1 ? 's' : ''}`;
+            renderPagination('aten', pages, atenPage, p => { atenPage = p; renderAtencionTable(); });
+        }
+
+        function renderPagination(prefix, pages, current, onPage) {
+            const el = document.getElementById(`${prefix}-pagination`);
+            if (!el) return;
+            if (pages <= 1) { el.innerHTML = ''; return; }
+            let html = '';
+            if (current > 1) html += `<button class="page-btn" onclick="(${onPage})(${current - 1})"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>`;
+            for (let p = Math.max(1, current - 2); p <= Math.min(pages, current + 2); p++) {
+                html += `<button class="page-btn ${p === current ? 'active' : ''}" onclick="(${onPage})(${p})">${p}</button>`;
+            }
+            if (current < pages) html += `<button class="page-btn" onclick="(${onPage})(${current + 1})"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>`;
+            el.innerHTML = html;
+        }
+
+        function openAtencionModal(id = null) {
+            editAtenId = id;
+            document.getElementById('modal-aten-title').textContent = id ? 'Editar Registro' : 'Registrar Atención';
+            if (id) {
+                const r = atencionData.find(x => x.id === id);
+                document.getElementById('af-fecha').value = r.fecha;
+                document.getElementById('af-servicio').value = r.servicio;
+                document.getElementById('af-nombre').value = r.nombre;
+                document.getElementById('af-cedula').value = r.cedula;
+                document.getElementById('af-telefono').value = r.telefono || '';
+            } else {
+                document.getElementById('af-fecha').value = new Date().toISOString().split('T')[0];
+                document.getElementById('af-servicio').value = '';
+                document.getElementById('af-nombre').value = '';
+                document.getElementById('af-cedula').value = '';
+                document.getElementById('af-telefono').value = '';
+            }
+            document.getElementById('modal-atencion').classList.remove('hidden');
+        }
+
+        function closeAtencionModal() {
+            document.getElementById('modal-atencion').classList.add('hidden');
+        }
+
+        function saveAtencion() {
+            const fecha = document.getElementById('af-fecha').value;
+            const servicio = document.getElementById('af-servicio').value;
+            const nombre = document.getElementById('af-nombre').value.trim();
+            const cedula = document.getElementById('af-cedula').value.trim();
+            const telefono = document.getElementById('af-telefono').value.trim();
+            if (!fecha || !servicio || !nombre || !cedula) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+            if (editAtenId) {
+                const idx = atencionData.findIndex(r => r.id === editAtenId);
+                atencionData[idx] = { ...atencionData[idx], fecha, servicio, nombre, cedula, telefono };
+                toast('Registro actualizado ');
+            } else {
+                atencionData.push({ id: uuid(), fecha, servicio, nombre, cedula, telefono });
+                toast('Atención registrada ');
+            }
+            saveData(STORAGE_ATEN, atencionData);
+            closeAtencionModal();
+            renderAtencionTable();
+        }
+
+        function editAtencion(id) { openAtencionModal(id); }
+
+        async function deleteAtencion(id) {
+            const ok = await customConfirm({ title: '¿Eliminar registro?', msg: 'Se eliminará esta atención permanentemente.', okLabel: 'Sí, eliminar', okClass: 'btn-danger', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass: 'danger' });
+            if (!ok) return;
+            atencionData = atencionData.filter(r => r.id !== id);
+            saveData(STORAGE_ATEN, atencionData);
+            toast('Registro eliminado', 'error');
+            renderAtencionTable();
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  PENSIONADOS
+        // ══════════════════════════════════════════════════════
+        function togglePatolFields(show) {
+            document.getElementById('pf-patol-tipo-group').style.opacity = show ? '1' : '.4';
+            document.getElementById('pf-tratam-group').style.opacity = show ? '1' : '.4';
+        }
+        function toggleMedsField(show) {
+            const g = document.getElementById('pf-meds-tipo-group');
+            if (g) g.style.opacity = show ? '1' : '.4';
+        }
+
+        function initPensionados() {
+            const sel = document.getElementById('pens-filter-mes');
+            MONTHS.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); });
+            renderPensTable();
+        }
+
+        function getFilteredPens() {
+            const search = (document.getElementById('pens-search')?.value || '').toLowerCase();
+            const mes = document.getElementById('pens-filter-mes')?.value || '';
+            const genero = document.getElementById('pens-filter-genero')?.value || '';
+            const pension = document.getElementById('pens-filter-pension')?.value || '';
+            return pensionadosData.filter(r => {
+                const matchS = !search || r.nombre.toLowerCase().includes(search) || (r.cedula || '').includes(search);
+                const matchM = !mes || r.mes === mes;
+                const matchG = !genero || r.genero === genero;
+                const matchP = !pension || (r.tipoPension || '').includes(pension);
+                return matchS && matchM && matchG && matchP;
+            }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+        }
+
+        function renderPensTable() {
+            const filtered = getFilteredPens();
+            const total = filtered.length;
+            const pages = Math.ceil(total / PAGE_SIZE);
+            if (pensPage > pages) pensPage = 1;
+            const slice = filtered.slice((pensPage - 1) * PAGE_SIZE, pensPage * PAGE_SIZE);
+            const tbody = document.getElementById('pens-tbody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b0b8d0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg></div><div class="empty-title">Sin pensionados registrados</div><div class="empty-sub">Use el botón "Registrar Pensionado" para agregar registros.</div></div></td></tr>`;
+            } else {
+                tbody.innerHTML = slice.map((r, i) => `
+      <tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted)">${(pensPage - 1) * PAGE_SIZE + i + 1}</td>
+        <td><strong>${r.nombre}</strong></td>
+        <td style="font-family:'IBM Plex Mono',monospace">${r.cedula}</td>
+        <td>${r.edad || '—'}</td>
+        <td>${genTag(r.genero)}</td>
+        <td>${r.tipoPension ? `<span class="tag tag-otras">${r.tipoPension}</span>` : '—'}</td>
+        <td>${r.banco || '—'}</td>
+        <td><span class="badge">${r.mes}</span></td>
+        <td>
+          <button class="btn btn-outline btn-sm" onclick="viewPensionado('${r.id}')">Ver</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="editPensionado('${r.id}')">Editar</button>
+          <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deletePensionado('${r.id}')"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </td>
+      </tr>`).join('');
+            }
+            document.getElementById('pens-count').textContent = `${total} pensionado${total !== 1 ? 's' : ''}`;
+            renderPagination('pens', pages, pensPage, p => { pensPage = p; renderPensTable(); });
+        }
+
+        function openPensionadoModal(id = null) {
+            editPensId = id;
+            document.getElementById('modal-pens-title').textContent = id ? 'Editar Pensionado' : 'Registrar Pensionado';
+            // reset
+            ['pf-nombre', 'pf-cedula', 'pf-telefono', 'pf-analista', 'pf-estado', 'pf-municipio', 'pf-parroquia', 'pf-direccion',
+                'pf-centro-votacion', 'pf-tipo-pension', 'pf-banco', 'pf-consejo', 'pf-patol-tipo', 'pf-tratamiento',
+                'pf-meds-tipo', 'pf-club', 'pf-num-solic', 'pf-tipo-solic'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = id === 'pf-estado' ? 'ZULIA' : id === 'pf-municipio' ? 'CABIMAS' : '';
+                });
+            document.getElementById('pf-edad').value = '';
+            document.getElementById('pf-fnac').value = '';
+            document.getElementById('pf-genero').value = '';
+            document.getElementById('pf-mes').value = '';
+            document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
+
+            if (id) {
+                const r = pensionadosData.find(x => x.id === id);
+                document.getElementById('pf-nombre').value = r.nombre || '';
+                document.getElementById('pf-cedula').value = r.cedula || '';
+                document.getElementById('pf-edad').value = r.edad || '';
+                document.getElementById('pf-fnac').value = r.fechaNac || '';
+                document.getElementById('pf-genero').value = r.genero || '';
+                document.getElementById('pf-telefono').value = r.telefono || '';
+                document.getElementById('pf-mes').value = r.mes || '';
+                document.getElementById('pf-analista').value = r.analista || '';
+                document.getElementById('pf-estado').value = r.estado || 'ZULIA';
+                document.getElementById('pf-municipio').value = r.municipio || 'CABIMAS';
+                document.getElementById('pf-parroquia').value = r.parroquia || '';
+                document.getElementById('pf-direccion').value = r.direccion || '';
+                document.getElementById('pf-centro-votacion').value = r.centroVotacion || '';
+                document.getElementById('pf-tipo-pension').value = r.tipoPension || '';
+                document.getElementById('pf-banco').value = r.banco || '';
+                document.getElementById('pf-consejo').value = r.consejo || '';
+                document.getElementById('pf-patol-tipo').value = r.tipoPatologia || '';
+                document.getElementById('pf-tratamiento').value = r.tratamiento || '';
+                document.getElementById('pf-meds-tipo').value = r.tipoMeds || '';
+                document.getElementById('pf-club').value = r.club || '';
+                document.getElementById('pf-num-solic').value = r.numSolicitud || '';
+                document.getElementById('pf-tipo-solic').value = r.tipoSolicitud || '';
+                // radio buttons
+                const setRadio = (name, val) => { if (val) { const el = document.querySelector(`[name="${name}"][value="${val}"]`); if (el) el.checked = true; } };
+                setRadio('pf-cne', r.cne); setRadio('pf-ivss', r.esIvss); setRadio('pf-alim', r.alimentos);
+                toggleCentroVotacion(r.cne === 'SI');
+                setRadio('pf-inass', r.inass); setRadio('pf-patol', r.tienePatol);
+                setRadio('pf-meds', r.tieneMeds); setRadio('pf-venapp', r.venapp); setRadio('pf-solic-esp', r.solicEsp);
+            }
+            document.getElementById('modal-pensionado').classList.remove('hidden');
+        }
+
+        function closePensionadoModal() {
+            document.getElementById('modal-pensionado').classList.add('hidden');
+        }
+
+        function getRadio(name) {
+            const el = document.querySelector(`[name="${name}"]:checked`);
+            return el ? el.value : '';
+        }
+
+        function savePensionado() {
+            const nombre = document.getElementById('pf-nombre').value.trim();
+            const cedula = document.getElementById('pf-cedula').value.trim();
+            const mes = document.getElementById('pf-mes').value;
+            if (!nombre || !cedula || !mes) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+
+            const data = {
+                nombre, cedula,
+                edad: document.getElementById('pf-edad').value,
+                fechaNac: document.getElementById('pf-fnac').value,
+                genero: document.getElementById('pf-genero').value,
+                telefono: document.getElementById('pf-telefono').value,
+                mes, analista: document.getElementById('pf-analista').value,
+                estado: document.getElementById('pf-estado').value,
+                municipio: document.getElementById('pf-municipio').value,
+                parroquia: document.getElementById('pf-parroquia').value,
+                direccion: document.getElementById('pf-direccion').value,
+                cne: getRadio('pf-cne'),
+                centroVotacion: document.getElementById('pf-centro-votacion').value,
+                esIvss: getRadio('pf-ivss'),
+                tipoPension: document.getElementById('pf-tipo-pension').value,
+                banco: document.getElementById('pf-banco').value,
+                alimentos: getRadio('pf-alim'),
+                inass: getRadio('pf-inass'),
+                consejo: document.getElementById('pf-consejo').value,
+                tienePatol: getRadio('pf-patol'),
+                tipoPatologia: document.getElementById('pf-patol-tipo').value,
+                tratamiento: document.getElementById('pf-tratamiento').value,
+                tieneMeds: getRadio('pf-meds'),
+                tipoMeds: document.getElementById('pf-meds-tipo').value,
+                club: document.getElementById('pf-club').value,
+                venapp: getRadio('pf-venapp'),
+                numSolicitud: document.getElementById('pf-num-solic').value,
+                solicEsp: getRadio('pf-solic-esp'),
+                tipoSolicitud: document.getElementById('pf-tipo-solic').value,
+            };
+
+            if (editPensId) {
+                const idx = pensionadosData.findIndex(r => r.id === editPensId);
+                pensionadosData[idx] = { ...pensionadosData[idx], ...data };
+                toast('Pensionado actualizado ');
+            } else {
+                pensionadosData.push({ id: uuid(), oficina: 'OA CABIMAS', ...data });
+                toast('Pensionado registrado ');
+            }
+            saveData(STORAGE_PENS, pensionadosData);
+            closePensionadoModal();
+            renderPensTable();
+        }
+
+        function editPensionado(id) { openPensionadoModal(id); }
+
+        async function deletePensionado(id) {
+            const ok = await customConfirm({ title: '¿Eliminar pensionado?', msg: 'Se eliminará este registro del censo permanentemente.', okLabel: 'Sí, eliminar', okClass: 'btn-danger', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass: 'danger' });
+            if (!ok) return;
+            pensionadosData = pensionadosData.filter(r => r.id !== id);
+            saveData(STORAGE_PENS, pensionadosData);
+            toast('Registro eliminado', 'error');
+            renderPensTable();
+        }
+
+        function viewPensionado(id) {
+            const r = pensionadosData.find(x => x.id === id);
+            if (!r) return;
+            const field = (label, val) => val ? `
+    <div class="detail-field">
+      <div class="detail-field-label">${label}</div>
+      <div class="detail-field-value">${val}</div>
+    </div>` : '';
+
+            document.getElementById('pens-detail-body').innerHTML = `
+    <div class="detail-header">
+      <div class="detail-name">${r.nombre}</div>
+      <div class="detail-meta">
+        <div class="detail-meta-item">CI: <span>${r.cedula}</span></div>
+        <div class="detail-meta-item">Edad: <span>${r.edad || '—'}</span></div>
+        <div class="detail-meta-item">Género: <span>${r.genero === 'M' ? 'Masculino' : r.genero === 'F' ? 'Femenino' : '—'}</span></div>
+        <div class="detail-meta-item">Mes: <span>${r.mes}</span></div>
+        <div class="detail-meta-item">Analista: <span>${r.analista || '—'}</span></div>
+      </div>
+    </div>
+    <div class="detail-grid">
+      ${field('Teléfono', r.telefono)}
+      ${field('Fecha de Nacimiento', r.fechaNac ? fmt_date(r.fechaNac) : '')}
+      ${field('Oficina Administrativa', r.oficina)}
+      ${field('Estado', r.estado)}
+      ${field('Municipio', r.municipio)}
+      ${field('Parroquia', r.parroquia)}
+      ${field('Dirección', r.direccion)}
+      ${field('Inscrito en el CNE', r.cne)}
+      ${field('Centro de Votación', r.centroVotacion)}
+      ${field('Es Pensionado del IVSS', r.esIvss)}
+      ${field('Tipo de Pensión', r.tipoPension)}
+      ${field('Banco donde Cobra', r.banco)}
+      ${field('Recibe Beneficio Alimentación', r.alimentos)}
+      ${field('INASS o IVSS', r.inass)}
+      ${field('Consejo Comunal', r.consejo)}
+      ${field('Padece Patología', r.tienePatol)}
+      ${field('Tipo de Patología', r.tipoPatologia)}
+      ${field('Tratamiento Crónico', r.tratamiento)}
+      ${field('Requiere Medicamentos', r.tieneMeds)}
+      ${field('Tipo de Medicamentos', r.tipoMeds)}
+      ${field('Club de Abuelos', r.club)}
+      ${field('Solicitud VenApp 1x10', r.venapp)}
+      ${field('N° Solicitud', r.numSolicitud)}
+      ${field('Solicitud Especial', r.solicEsp)}
+      ${field('Tipo de Solicitud', r.tipoSolicitud)}
+    </div>
+    <div style="padding:16px 0 0;display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="document.getElementById('modal-pens-detail').classList.add('hidden')">Cerrar</button>
+      <button class="btn btn-primary" onclick="document.getElementById('modal-pens-detail').classList.add('hidden');editPensionado('${r.id}')">Editar Registro</button>
+    </div>
+  `;
+            document.getElementById('modal-pens-detail').classList.remove('hidden');
+        }
+
+        // ══════════════════════════════════════════════════════
+        //  REPORTES
+        // ══════════════════════════════════════════════════════
+        function renderReportes() {
+            const grid = document.getElementById('rep-month-grid');
+            const tbody = document.getElementById('rep-tbody');
+            let rows = '';
+
+            MONTHS.forEach((m, i) => {
+                const atenMes = atencionData.filter(r => getMes(r.fecha) === m);
+                const count = atenMes.length;
+                const card = document.createElement('div');
+                card.className = 'month-card';
+                card.innerHTML = `<div class="month-name">${m.slice(0, 3)}</div><div class="month-count">${count}</div>`;
+                grid.appendChild(card);
+
+                const countS = k => atenMes.filter(r => r.servicio === k).length;
+                const af = countS('AFILIACION'), pr = countS('PRESTACIONES'), rc = countS('RECAUDACION_COBRANZA'),
+                    ce = countS('ATENCION_CESANTE'), fi = countS('FISCALIZACION'), ot = countS('OTRAS_ATENCIONES');
+                const bg = count > 0 ? 'var(--gold-pale)' : '';
+                rows += `<tr style="background:${bg}">
+      <td><strong>${m}</strong></td>
+      <td><strong>${count}</strong></td>
+      <td>${af}</td><td>${pr}</td><td>${rc}</td><td>${ce}</td><td>${fi}</td><td>${ot}</td>
+    </tr>`;
+            });
+            tbody.innerHTML = rows;
+
+            drawReporteCharts();
+        }
+
+        function drawReporteCharts() {
+            const servKeys = ['AFILIACION', 'PRESTACIONES', 'RECAUDACION_COBRANZA', 'ATENCION_CESANTE', 'FISCALIZACION', 'OTRAS_ATENCIONES'];
+            const servLabels = ['Afiliación', 'Prestaciones', 'Recaud.', 'At. Cesante', 'Fiscalización', 'Otras'];
+            const datasets = servKeys.map((k, i) => ({
+                label: servLabels[i],
+                data: MONTHS.map(m => atencionData.filter(r => getMes(r.fecha) === m && r.servicio === k).length),
+                backgroundColor: PALETTE[i], borderRadius: 3, stack: 'stack'
+            }));
+
+            new Chart(document.getElementById('rep-chart-stacked'), {
+                type: 'bar',
+                data: { labels: MONTHS.map(m => m.slice(0, 3)), datasets },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eef2f8' } } } }
+            });
+
+            const pensCounts = MONTHS.map(m => pensionadosData.filter(r => r.mes === m).length);
+            new Chart(document.getElementById('rep-chart-pens'), {
+                type: 'line',
+                data: {
+                    labels: MONTHS.map(m => m.slice(0, 3)),
+                    datasets: [{ label: 'Pensionados', data: pensCounts, borderColor: GOLD, backgroundColor: '#fef3dd', fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: GOLD }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eef2f8' } } } }
+            });
+        }
+
+        // ── CNE TOGGLE ───────────────────────────────────────────────────────
+        function toggleCentroVotacion(enabled) {
+            const el = document.getElementById('pf-centro-votacion');
+            if (!el) return;
+            el.disabled = !enabled;
+            el.style.opacity = enabled ? '1' : '.45';
+            el.style.cursor = enabled ? '' : 'not-allowed';
+            if (!enabled) el.value = '';
+        }
+
+        // ── CUSTOM CONFIRM ───────────────────────────────────────────────────
+        function customConfirm({ title = '¿Estás seguro?', msg = 'Esta acción no se puede deshacer.', okLabel = 'Eliminar', okClass = 'btn-danger', icon = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass = 'danger' } = {}) {
+            return new Promise(resolve => {
+                const dialog = document.getElementById('confirm-dialog');
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-msg').textContent = msg;
+                document.getElementById('confirm-icon').innerHTML = icon;
+                document.getElementById('confirm-icon').className = `confirm-icon ${iconClass}`;
+                const okBtn = document.getElementById('confirm-ok-btn');
+                okBtn.textContent = okLabel;
+                okBtn.className = `btn ${okClass}`;
+                dialog.style.display = 'flex';
+
+                const cleanup = (result) => {
+                    dialog.style.display = 'none';
+                    okBtn.replaceWith(okBtn.cloneNode(true)); // remove old listeners
+                    document.getElementById('confirm-cancel-btn').replaceWith(document.getElementById('confirm-cancel-btn').cloneNode(true));
+                    resolve(result);
+                };
+
+                // Re-query after clone
+                document.getElementById('confirm-ok-btn').addEventListener('click', () => cleanup(true), { once: true });
+                document.getElementById('confirm-cancel-btn').addEventListener('click', () => cleanup(false), { once: true });
+                dialog.addEventListener('click', e => { if (e.target === dialog) cleanup(false); }, { once: true });
+            });
+        }
+
+        // ── INIT ─────────────────────────────────────────────────────────────
+        updateDate();
+        navigate('dashboard');
+    </script>
+</body>
+
+</html>
