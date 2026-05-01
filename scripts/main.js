@@ -5,6 +5,10 @@ let pensionadosData = [];
 let editAtenId = null;
 let editPensId = null;
 
+// ── SAVE GUARDS (previenen doble submit)
+let isSavingAten = false;
+let isSavingPens = false;
+
 // ── PAGINATION STATE 
 const PAGE_SIZE = 20;
 let atenPage = 1;
@@ -250,12 +254,24 @@ function closeAtencionModal() {
 }
 
 async function saveAtencion() {
+    if (isSavingAten) return;          // bloquear doble clic
     const fecha = document.getElementById('af-fecha').value;
     const servicio = document.getElementById('af-servicio').value;
     const nombre = document.getElementById('af-nombre').value.trim();
     const cedula = document.getElementById('af-cedula').value.trim();
     const telefono = document.getElementById('af-telefono').value.trim();
     if (!fecha || !servicio || !nombre || !cedula) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+
+    // ─ Cédula duplicada (solo al crear)
+    if (!editAtenId) {
+        const dup = atencionData.find(r => r.cedula === cedula);
+        if (dup) {
+            toast(`La cédula ${cedula} ya tiene un registro de atención.`, 'error');
+            return;
+        }
+    }
+
+    isSavingAten = true;
     try {
         if (editAtenId) {
             await fsUpdateAten(editAtenId, { fecha, servicio, nombre, cedula, telefono });
@@ -266,7 +282,11 @@ async function saveAtencion() {
         }
         closeAtencionModal();
         renderAtencionTable();
-    } catch(e) { toast('Error al guardar: ' + e.message, 'error'); }
+    } catch(e) {
+        toast('Error al guardar: ' + e.message, 'error');
+    } finally {
+        isSavingAten = false;
+    }
 }
 
 function editAtencion(id) { openAtencionModal(id); }
@@ -402,6 +422,7 @@ function getRadio(name) {
 }
 
 async function savePensionado() {
+    if (isSavingPens) return;          // bloquear doble clic
     const nombre = document.getElementById('pf-nombre').value.trim();
     const cedula = document.getElementById('pf-cedula').value.trim();
     const mes = document.getElementById('pf-mes').value;
@@ -438,6 +459,16 @@ async function savePensionado() {
         tipoSolicitud: document.getElementById('pf-tipo-solic').value,
     };
 
+    // ─ Cédula duplicada (solo al crear)
+    if (!editPensId) {
+        const dup = pensionadosData.find(r => r.cedula === cedula);
+        if (dup) {
+            toast(`La cédula ${cedula} ya está registrada en el censo (${dup.nombre}).`, 'error');
+            return;
+        }
+    }
+
+    isSavingPens = true;
     try {
         if (editPensId) {
             await fsUpdatePens(editPensId, data);
@@ -448,7 +479,11 @@ async function savePensionado() {
         }
         closePensionadoModal();
         renderPensTable();
-    } catch(e) { toast('Error al guardar: ' + e.message, 'error'); }
+    } catch(e) {
+        toast('Error al guardar: ' + e.message, 'error');
+    } finally {
+        isSavingPens = false;
+    }
 }
 
 function editPensionado(id) { openPensionadoModal(id); }
