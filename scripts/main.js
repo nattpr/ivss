@@ -251,6 +251,38 @@ function openAtencionModal(id = null) {
 
 function closeAtencionModal() {
     document.getElementById('modal-atencion').classList.add('hidden');
+    const st = document.getElementById('af-cedula-status');
+    if (st) st.textContent = '';
+}
+
+// Busca la cédula al salir del campo y pre-llena nombre/teléfono si ya existe
+function lookupCedulaAten() {
+    if (editAtenId) return; // no aplica al editar
+    const cedula = document.getElementById('af-cedula').value.trim();
+    const status = document.getElementById('af-cedula-status');
+    if (!cedula) { if (status) status.textContent = ''; return; }
+
+    // Buscar en atenciones previas (registro más reciente de esa cédula)
+    const prevAten = atencionData.find(r => r.cedula === cedula);
+    // Buscar en pensionados
+    const prevPens = pensionadosData.find(r => r.cedula === cedula);
+    const match = prevAten || prevPens;
+
+    if (match) {
+        document.getElementById('af-nombre').value   = match.nombre   || '';
+        document.getElementById('af-telefono').value = match.telefono || '';
+        if (status) {
+            status.textContent = '✓ Ciudadano registrado — datos pre-cargados';
+            status.style.color = '#1a7a4a';
+        }
+    } else {
+        document.getElementById('af-nombre').value   = '';
+        document.getElementById('af-telefono').value = '';
+        if (status) {
+            status.textContent = '• Ciudadano nuevo — complete los datos';
+            status.style.color = 'var(--text-secondary, #6b7a99)';
+        }
+    }
 }
 
 async function saveAtencion() {
@@ -262,15 +294,6 @@ async function saveAtencion() {
     const telefono = document.getElementById('af-telefono').value.trim();
     if (!fecha || !servicio || !nombre || !cedula) { toast('Complete los campos obligatorios (*)', 'error'); return; }
 
-    // ─ Cédula duplicada (solo al crear)
-    if (!editAtenId) {
-        const dup = atencionData.find(r => r.cedula === cedula);
-        if (dup) {
-            toast(`La cédula ${cedula} ya tiene un registro de atención.`, 'error');
-            return;
-        }
-    }
-
     isSavingAten = true;
     try {
         if (editAtenId) {
@@ -280,6 +303,9 @@ async function saveAtencion() {
             await fsAddAten({ fecha, servicio, nombre, cedula, telefono });
             toast('Atención registrada ✓');
         }
+        // Sincronizar datos personales con el resto de registros
+        await fsSyncCiudadano(cedula, { nombre, telefono });
+        
         closeAtencionModal();
         renderAtencionTable();
     } catch(e) {
@@ -382,8 +408,9 @@ function openPensionadoModal(id = null) {
         const r = pensionadosData.find(x => x.id === id);
         document.getElementById('pf-nombre').value = r.nombre || '';
         document.getElementById('pf-cedula').value = r.cedula || '';
-        document.getElementById('pf-edad').value = r.edad || '';
         document.getElementById('pf-fnac').value = r.fechaNac || '';
+        if (r.fechaNac) calcEdad();
+        else document.getElementById('pf-edad').value = r.edad || '';
         document.getElementById('pf-genero').value = r.genero || '';
         document.getElementById('pf-telefono').value = r.telefono || '';
         document.getElementById('pf-mes').value = r.mes || '';
@@ -414,6 +441,82 @@ function openPensionadoModal(id = null) {
 
 function closePensionadoModal() {
     document.getElementById('modal-pensionado').classList.add('hidden');
+    const st = document.getElementById('pf-cedula-status');
+    if (st) st.textContent = '';
+}
+
+// Calcula la edad automáticamente según la fecha de nacimiento
+function calcEdad() {
+    const fnac = document.getElementById('pf-fnac').value;
+    const edadInput = document.getElementById('pf-edad');
+    if (!fnac) {
+        edadInput.value = '';
+        return;
+    }
+    const birthDate = new Date(fnac + 'T00:00:00');
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    edadInput.value = age;
+}
+
+// Busca la cédula al salir del campo y pre-llena los datos si ya existe
+function lookupCedulaPens() {
+    if (editPensId) return; // no aplica al editar
+    const cedula = document.getElementById('pf-cedula').value.trim();
+    const status = document.getElementById('pf-cedula-status');
+    if (!cedula) { if (status) status.textContent = ''; return; }
+
+    const prevPens = pensionadosData.find(r => r.cedula === cedula);
+    const prevAten = atencionData.find(r => r.cedula === cedula);
+    const match = prevPens || prevAten;
+
+    if (match) {
+        document.getElementById('pf-nombre').value = match.nombre || '';
+        document.getElementById('pf-fnac').value = match.fechaNac || '';
+        if (match.fechaNac) calcEdad();
+        else document.getElementById('pf-edad').value = match.edad || '';
+        document.getElementById('pf-genero').value = match.genero || '';
+        document.getElementById('pf-telefono').value = match.telefono || '';
+        if (match.analista) document.getElementById('pf-analista').value = match.analista;
+        if (match.estado) document.getElementById('pf-estado').value = match.estado;
+        if (match.municipio) document.getElementById('pf-municipio').value = match.municipio;
+        document.getElementById('pf-parroquia').value = match.parroquia || '';
+        document.getElementById('pf-direccion').value = match.direccion || '';
+        document.getElementById('pf-centro-votacion').value = match.centroVotacion || '';
+        document.getElementById('pf-tipo-pension').value = match.tipoPension || '';
+        document.getElementById('pf-banco').value = match.banco || '';
+        document.getElementById('pf-consejo').value = match.consejo || '';
+        document.getElementById('pf-patol-tipo').value = match.tipoPatologia || '';
+        document.getElementById('pf-tratamiento').value = match.tratamiento || '';
+        document.getElementById('pf-meds-tipo').value = match.tipoMeds || '';
+        document.getElementById('pf-club').value = match.club || '';
+        document.getElementById('pf-num-solic').value = match.numSolicitud || '';
+        document.getElementById('pf-tipo-solic').value = match.tipoSolicitud || '';
+
+        const setRadio = (name, val) => { if (val) { const el = document.querySelector(`[name="${name}"][value="${val}"]`); if (el) el.checked = true; } };
+        setRadio('pf-cne', match.cne); setRadio('pf-ivss', match.esIvss); setRadio('pf-alim', match.alimentos);
+        toggleCentroVotacion(match.cne === 'SI');
+        setRadio('pf-inass', match.inass); setRadio('pf-patol', match.tienePatol);
+        togglePatolFields(match.tienePatol === 'SI');
+        setRadio('pf-meds', match.tieneMeds); 
+        toggleMedsField(match.tieneMeds === 'SI');
+        setRadio('pf-venapp', match.venapp); setRadio('pf-solic-esp', match.solicEsp);
+
+        if (status) {
+            status.textContent = '✓ Ciudadano registrado — datos pre-cargados';
+            status.style.color = '#1a7a4a';
+        }
+    } else {
+        document.getElementById('pf-nombre').value = '';
+        if (status) {
+            status.textContent = '• Ciudadano nuevo — complete los datos';
+            status.style.color = 'var(--text-secondary, #6b7a99)';
+        }
+    }
 }
 
 function getRadio(name) {
@@ -459,24 +562,18 @@ async function savePensionado() {
         tipoSolicitud: document.getElementById('pf-tipo-solic').value,
     };
 
-    // ─ Cédula duplicada (solo al crear)
-    if (!editPensId) {
-        const dup = pensionadosData.find(r => r.cedula === cedula);
-        if (dup) {
-            toast(`La cédula ${cedula} ya está registrada en el censo (${dup.nombre}).`, 'error');
-            return;
-        }
-    }
-
     isSavingPens = true;
     try {
         if (editPensId) {
             await fsUpdatePens(editPensId, data);
             toast('Pensionado actualizado ✓');
         } else {
-            await fsAddPens({ oficina: 'OA CABIMAS', ...data });
+            await fsAddPens({ oficina: 'OA CABIMAS', fechaRegistro: new Date().toISOString().split('T')[0], ...data });
             toast('Pensionado registrado ✓');
         }
+        // Sincronizar datos personales con el resto de registros
+        await fsSyncCiudadano(cedula, data);
+
         closePensionadoModal();
         renderPensTable();
     } catch(e) {
@@ -646,3 +743,148 @@ function customConfirm({ title = '¿Estás seguro?', msg = 'Esta acción no se p
 }
 
 // ── INIT: gestionado por auth.onAuthStateChanged en firebase-ops.js
+
+// ── EXCEL EXPORTS (ExcelJS) ─────────────────────────
+function styleWorksheet(worksheet) {
+    // Style Header Row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1a7a4a' } }; // IVSS Green
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+    
+    // Add Borders and alternating colors
+    worksheet.eachRow({ includeEmpty: false }, function(row, rowNumber) {
+        row.eachCell({ includeEmpty: true }, function(cell, colNumber) {
+            cell.border = {
+                top: {style:'thin', color: {argb:'FFE2E8F0'}},
+                left: {style:'thin', color: {argb:'FFE2E8F0'}},
+                bottom: {style:'thin', color: {argb:'FFE2E8F0'}},
+                right: {style:'thin', color: {argb:'FFE2E8F0'}}
+            };
+            if (rowNumber > 1) {
+                cell.alignment = { vertical: 'middle' };
+                if (rowNumber % 2 === 0) {
+                    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+                }
+            }
+        });
+    });
+}
+
+async function exportAtencionExcel() {
+    const dDesde = document.getElementById('export-desde').value;
+    const dHasta = document.getElementById('export-hasta').value;
+    
+    let list = atencionData;
+    if (dDesde) list = list.filter(r => r.fecha >= dDesde);
+    if (dHasta) list = list.filter(r => r.fecha <= dHasta);
+    
+    if (list.length === 0) {
+        toast('No hay datos en este rango de fechas', 'error');
+        return;
+    }
+    
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Atención");
+
+    worksheet.columns = [
+        { header: 'N°', key: 'n', width: 6 },
+        { header: 'Fecha', key: 'fecha', width: 15 },
+        { header: 'Servicio', key: 'servicio', width: 35 },
+        { header: 'Cédula', key: 'cedula', width: 15 },
+        { header: 'Nombres y Apellidos', key: 'nombre', width: 45 },
+        { header: 'Teléfono', key: 'telefono', width: 20 }
+    ];
+
+    list.forEach((r, i) => {
+        worksheet.addRow({
+            n: i + 1,
+            fecha: r.fecha || '-',
+            servicio: r.servicio || '-',
+            cedula: r.cedula || '-',
+            nombre: r.nombre || '-',
+            telefono: r.telefono || '-'
+        });
+    });
+
+    styleWorksheet(worksheet);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `Reporte_Atencion_${dDesde||'Inicio'}_al_${dHasta||'Fin'}.xlsx`);
+}
+
+async function exportPensionadosExcel() {
+    const dDesde = document.getElementById('export-desde').value;
+    const dHasta = document.getElementById('export-hasta').value;
+    
+    let list = pensionadosData;
+    if (dDesde || dHasta) {
+        list = list.filter(r => {
+            if (!r.fechaRegistro) return true;
+            if (dDesde && r.fechaRegistro < dDesde) return false;
+            if (dHasta && r.fechaRegistro > dHasta) return false;
+            return true;
+        });
+    }
+    
+    if (list.length === 0) {
+        toast('No hay datos en este rango de fechas', 'error');
+        return;
+    }
+    
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Pensionados");
+
+    const headers = [
+        {h: 'N°', k: 'n', w: 6},
+        {h: 'Fecha Registro', k: 'fechaRegistro', w: 18},
+        {h: 'Oficina', k: 'oficina', w: 20},
+        {h: 'Nombres y Apellidos', k: 'nombre', w: 45},
+        {h: 'Cédula', k: 'cedula', w: 15},
+        {h: 'Edad', k: 'edad', w: 10},
+        {h: 'Fecha Nacimiento', k: 'fechaNac', w: 18},
+        {h: 'Género', k: 'genero', w: 12},
+        {h: 'Teléfono', k: 'telefono', w: 20},
+        {h: 'Mes', k: 'mes', w: 15},
+        {h: 'Analista', k: 'analista', w: 25},
+        {h: 'Estado', k: 'estado', w: 15},
+        {h: 'Municipio', k: 'municipio', w: 20},
+        {h: 'Parroquia', k: 'parroquia', w: 25},
+        {h: 'Dirección', k: 'direccion', w: 50},
+        {h: 'Inscrito CNE', k: 'cne', w: 15},
+        {h: 'Centro Votación', k: 'centroVotacion', w: 40},
+        {h: 'Pensionado IVSS', k: 'esIvss', w: 20},
+        {h: 'Tipo de Pensión', k: 'tipoPension', w: 25},
+        {h: 'Banco', k: 'banco', w: 30},
+        {h: 'Recibe Alimentos', k: 'alimentos', w: 18},
+        {h: 'Atención INASS', k: 'inass', w: 18},
+        {h: 'Consejo Comunal', k: 'consejo', w: 35},
+        {h: 'Posee Patología', k: 'tienePatol', w: 18},
+        {h: 'Tipo Patología', k: 'tipoPatologia', w: 40},
+        {h: 'Tratamiento', k: 'tratamiento', w: 40},
+        {h: 'Solicita Meds', k: 'tieneMeds', w: 15},
+        {h: 'Tipo Meds', k: 'tipoMeds', w: 40},
+        {h: 'Pertenece Club', k: 'club', w: 40},
+        {h: 'VenApp', k: 'venapp', w: 12},
+        {h: 'N° Solicitud', k: 'numSolicitud', w: 20},
+        {h: 'Solicitud Especial', k: 'solicEsp', w: 20},
+        {h: 'Tipo Solicitud', k: 'tipoSolicitud', w: 30}
+    ];
+
+    worksheet.columns = headers.map(x => ({ header: x.h, key: x.k, width: x.w }));
+
+    list.forEach((r, i) => {
+        const rowData = {};
+        headers.forEach(x => {
+            if (x.k === 'n') rowData[x.k] = i + 1;
+            else if (x.k === 'fechaRegistro' && !r.fechaRegistro) rowData[x.k] = 'Registro Antiguo';
+            else rowData[x.k] = r[x.k] || '-';
+        });
+        worksheet.addRow(rowData);
+    });
+
+    styleWorksheet(worksheet);
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `Reporte_Pensionados_${dDesde||'Inicio'}_al_${dHasta||'Fin'}.xlsx`);
+}

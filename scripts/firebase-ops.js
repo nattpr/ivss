@@ -100,6 +100,56 @@ async function fsDeletePens(id) {
     pensionadosData = pensionadosData.filter(r => r.id !== id);
 }
 
+// ── FIRESTORE CRUD · SYNC CIUDADANO ──────────────────────
+async function fsSyncCiudadano(cedula, dataToSync) {
+    if (!cedula || !dataToSync) return;
+    
+    const batch = db.batch();
+    let hasUpdates = false;
+
+    // Filter fields that are actually defined
+    const cleanData = {};
+    for (const key in dataToSync) {
+        if (dataToSync[key] !== undefined) cleanData[key] = dataToSync[key];
+    }
+    if (Object.keys(cleanData).length === 0) return;
+
+    const needsUpdate = (record, newData) => {
+        for (const key in newData) {
+            if (record[key] !== newData[key]) return true;
+        }
+        return false;
+    };
+
+    // Update in Atencion
+    const atenMatches = atencionData.filter(r => r.cedula === cedula);
+    atenMatches.forEach(r => {
+        const atenData = {};
+        if (cleanData.nombre !== undefined) atenData.nombre = cleanData.nombre;
+        if (cleanData.telefono !== undefined) atenData.telefono = cleanData.telefono;
+        
+        if (Object.keys(atenData).length > 0 && needsUpdate(r, atenData)) {
+            batch.update(db.collection('atencion').doc(r.id), atenData);
+            Object.assign(r, atenData); // Update memory
+            hasUpdates = true;
+        }
+    });
+
+    // Update in Pensionados
+    const pensMatches = pensionadosData.filter(r => r.cedula === cedula);
+    pensMatches.forEach(r => {
+        if (needsUpdate(r, cleanData)) {
+            batch.update(db.collection('pensionados').doc(r.id), cleanData);
+            Object.assign(r, cleanData); // Update memory
+            hasUpdates = true;
+        }
+    });
+
+    if (hasUpdates) {
+        await batch.commit();
+    }
+}
+
 // ── AUTH STATE LISTENER (app boot) ────────────────────
 // Ocultar login de inmediato; Firebase restaurará sesión si existe (no flash en recarga)
 document.getElementById('login-screen').style.display = 'none';

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -14,6 +14,9 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <!-- Excel Export & Styling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
 
 <body>
@@ -309,6 +312,27 @@
                     <div class="section-sub">Análisis global de atención al usuario · Enero–Diciembre 2026</div>
                 </div>
             </div>
+
+            <!-- EXCEL EXPORT PANEL -->
+            <div class="card" style="margin-bottom:18px">
+                <div class="card-header" style="flex-wrap:wrap; gap:12px;">
+                    <div class="card-title">Generador de Reportes (Excel)</div>
+                    <div class="filters-row" style="margin:0; align-items:flex-end;">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase">Desde (Fecha)</span>
+                            <input type="date" class="filter-input" id="export-desde">
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase">Hasta (Fecha)</span>
+                            <input type="date" class="filter-input" id="export-hasta">
+                        </div>
+                        <div style="display:flex; gap:8px;">
+                            <button class="btn btn-outline" style="height:36px; border-color:#217346; color:#217346" onclick="exportAtencionExcel()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Atención</button>
+                            <button class="btn btn-outline" style="height:36px; border-color:#217346; color:#217346" onclick="exportPensionadosExcel()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Pensionados</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="card" style="margin-bottom:18px">
                 <div class="card-header">
                     <div class="card-title">Resumen Anual por Mes</div>
@@ -382,13 +406,16 @@
                             <option value="OTRAS_ATENCIONES">Otras Atenciones</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Cédula de Identidad *</label>
+                        <input class="form-input" type="text" id="af-cedula" placeholder="Ej: 7862369"
+                            onblur="lookupCedulaAten()"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCedulaAten();}">
+                        <span id="af-cedula-status" style="font-size:11.5px;margin-top:5px;display:block;min-height:16px"></span>
+                    </div>
                     <div class="form-group form-full">
                         <label class="form-label">Nombres y Apellidos *</label>
                         <input class="form-input" type="text" id="af-nombre" placeholder="Nombre completo">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Cédula de Identidad *</label>
-                        <input class="form-input" type="text" id="af-cedula" placeholder="Ej: 7862369">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Teléfono</label>
@@ -427,21 +454,24 @@
                             <line x1="9" y1="16" x2="13" y2="16" />
                         </svg> Datos Personales</span></div>
                 <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Cédula de Identidad *</label>
+                        <input class="form-input" type="text" id="pf-cedula" placeholder="Ej: 7480674"
+                            onblur="lookupCedulaPens()"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCedulaPens();}">
+                        <span id="pf-cedula-status" style="font-size:11.5px;margin-top:5px;display:block;min-height:16px"></span>
+                    </div>
                     <div class="form-group form-full">
                         <label class="form-label">Nombre y Apellido *</label>
                         <input class="form-input" type="text" id="pf-nombre" placeholder="Nombre completo">
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Cédula de Identidad *</label>
-                        <input class="form-input" type="text" id="pf-cedula" placeholder="Ej: 7480674">
+                        <label class="form-label">Fecha de Nacimiento</label>
+                        <input class="form-input" type="date" id="pf-fnac" onchange="calcEdad()">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Edad</label>
-                        <input class="form-input" type="number" id="pf-edad" placeholder="Años">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Fecha de Nacimiento</label>
-                        <input class="form-input" type="date" id="pf-fnac">
+                        <input class="form-input" type="number" id="pf-edad" placeholder="Calculada" readonly style="background:#f4f6f8;cursor:not-allowed">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Género *</label>
