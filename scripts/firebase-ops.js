@@ -212,7 +212,7 @@ async function fsSyncCiudadano(cedula, dataToSync) {
     let hasUpdates = false;
 
      const cleanData = {};
-    const allowedKeys = ['nombre', 'fechaNac', 'edad', 'genero', 'telefono'];
+    const allowedKeys = ['nombre', 'fechaNac', 'edad', 'genero', 'telefono', 'nacionalidad'];
     
     allowedKeys.forEach(key => {
         if (dataToSync[key] !== undefined && dataToSync[key] !== null) {

@@ -226,18 +226,23 @@ function renderAtencionTable() {
     const pages = Math.ceil(total / PAGE_SIZE);
     if (atenPage > pages) atenPage = 1;
     const slice = filtered.slice((atenPage - 1) * PAGE_SIZE, atenPage * PAGE_SIZE);
-
     const tbody = document.getElementById('aten-tbody');
     if (!filtered.length) {
-        tbody.innerHTML = `<tr><td colspan="7"><div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b0b8d0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><div class="empty-title">Sin registros</div><div class="empty-sub">No hay atenciones que coincidan con los filtros aplicados.</div></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#b0b8d0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg></div><div class="empty-title">Sin registros</div><div class="empty-sub">No hay atenciones que coincidan con los filtros aplicados.</div></div></td></tr>`;
     } else {
         tbody.innerHTML = slice.map((r, i) => `
       <tr>
         <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted)">${(atenPage - 1) * PAGE_SIZE + i + 1}</td>
         <td>${fmt_date(r.fecha)}</td>
-        <td><strong>${r.nombre}</strong></td>
-        <td style="font-family:'IBM Plex Mono',monospace">${r.cedula}</td>
+        <td title="${r.nombre}">
+    <div style="max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+        <strong>${r.nombre}</strong>
+    </div>
+</td>
+        <td style="font-family: 'IBM Plex Mono', monospace;">${r.nacionalidad || 'V'}-${r.cedula}</td>
         <td>${r.telefono || '—'}</td>
+        <td>${r.empresa || '—'}</td>
+        <td style="font-family: 'IBM Plex Mono', monospace;">${r.rif || '—'}</td>
         <td>${servTag(r.servicio)}</td>
         <td>
           <button class="btn btn-outline btn-sm" onclick="editAtencion('${r.id}')">Editar</button>
@@ -270,17 +275,32 @@ function openAtencionModal(id = null) {
         document.getElementById('af-fecha').value = r.fecha;
         document.getElementById('af-servicio').value = r.servicio;
         document.getElementById('af-nombre').value = r.nombre;
+        document.getElementById('af-nacionalidad').value = r.nacionalidad || 'V';
         document.getElementById('af-cedula').value = r.cedula;
         // Cargamos el prefijo y número por separado
         setPhoneFields('af-prefijo', 'af-telefono', r.telefono);
+         document.getElementById('af-empresa').value = r.empresa || '';
+        if (r.rif && r.rif.includes('-')) {
+            const parts = r.rif.split('-');
+            document.getElementById('af-rif-letra').value = parts[0];
+            document.getElementById('af-rif-numero').value = parts.slice(1).join('-');
+        } else {
+            document.getElementById('af-rif-letra').value = 'J';
+            document.getElementById('af-rif-numero').value = r.rif || '';
+        }
     } else {
-        document.getElementById('af-fecha').value = getLocalDateStr(); // CAMBIO AQUÍ
+        document.getElementById('af-fecha').value = getLocalDateStr(); 
         document.getElementById('af-servicio').value = '';
         document.getElementById('af-nombre').value = '';
+        document.getElementById('af-nacionalidad').value = 'V';
         document.getElementById('af-cedula').value = '';
-        // Limpiamos los campos
         setPhoneFields('af-prefijo', 'af-telefono', '');
+         document.getElementById('af-empresa').value = '';
+        document.getElementById('af-rif-letra').value = 'J';
+        document.getElementById('af-rif-numero').value = '';
     }
+    
+    
     document.getElementById('modal-atencion').classList.remove('hidden');
 }
 
@@ -296,23 +316,35 @@ function lookupCedulaAten() {
     const cedula = document.getElementById('af-cedula').value.trim();
     const status = document.getElementById('af-cedula-status');
     if (!cedula) { if (status) status.textContent = ''; return; }
-
     // Buscar en atenciones previas (registro más reciente de esa cédula)
     const prevAten = atencionData.find(r => r.cedula === cedula);
     // Buscar en pensionados
     const prevPens = pensionadosData.find(r => r.cedula === cedula);
     const match = prevAten || prevPens;
-
     if (match) {
         document.getElementById('af-nombre').value = match.nombre || '';
+        document.getElementById('af-nacionalidad').value = match.nacionalidad || 'V';
         setPhoneFields('af-prefijo', 'af-telefono', match.telefono);
+        document.getElementById('af-empresa').value = match.empresa || '';
+        if (match.rif && match.rif.includes('-')) {
+            const parts = match.rif.split('-');
+            document.getElementById('af-rif-letra').value = parts[0];
+            document.getElementById('af-rif-numero').value = parts.slice(1).join('-');
+        } else {
+            document.getElementById('af-rif-letra').value = 'J';
+            document.getElementById('af-rif-numero').value = match.rif || '';
+        }
         if (status) {
             status.textContent = '✓ Ciudadano registrado — datos pre-cargados';
             status.style.color = '#1a7a4a';
         }
     } else {
         document.getElementById('af-nombre').value = '';
-        document.getElementById('af-telefono').value = '';
+        setPhoneFields('af-prefijo', 'af-telefono', '');
+        document.getElementById('af-nacionalidad').value = 'V';
+        document.getElementById('af-empresa').value = '';
+        document.getElementById('af-rif-letra').value = 'J';
+        document.getElementById('af-rif-numero').value = '';
         if (status) {
             status.textContent = '• Ciudadano nuevo — complete los datos';
             status.style.color = 'var(--text-secondary, #6b7a99)';
@@ -326,22 +358,27 @@ async function saveAtencion() {
     const servicio = document.getElementById('af-servicio').value;
     const nombre = document.getElementById('af-nombre').value.trim();
     const cedula = document.getElementById('af-cedula').value.trim();
+    const nacionalidad = document.getElementById('af-nacionalidad').value;
     const prefijo = document.getElementById('af-prefijo').value;
     const telCuerpo = document.getElementById('af-telefono').value.trim();
     const telefono = telCuerpo ? (prefijo + telCuerpo) : '';
+    const empresa = document.getElementById('af-empresa').value.trim();
+    const rifLetra = document.getElementById('af-rif-letra').value;
+    const rifNumero = document.getElementById('af-rif-numero').value.trim();
+    const rif = rifNumero ? `${rifLetra}-${rifNumero}` : '';
     if (!fecha || !servicio || !nombre || !cedula) { toast('Complete los campos obligatorios (*)', 'error'); return; }
 
     isSavingAten = true;
     try {
         if (editAtenId) {
-            await fsUpdateAten(editAtenId, { fecha, servicio, nombre, cedula, telefono });
+            await fsUpdateAten(editAtenId, {  nacionalidad, fecha, servicio, nombre, cedula, telefono, empresa, rif });
             toast('Registro actualizado ✓');
         } else {
-            await fsAddAten({ fecha, servicio, nombre, cedula, telefono });
+            await fsAddAten({ nacionalidad, fecha, servicio, nombre, cedula, telefono, empresa, rif });
             toast('Atención registrada ✓');
         }
         // Sincronizar datos personales con el resto de registros
-        await fsSyncCiudadano(cedula, { nombre, telefono });
+        await fsSyncCiudadano(cedula, { nombre, telefono, nacionalidad });
 
         closeAtencionModal();
         renderAtencionTable();
@@ -465,11 +502,13 @@ function openPensionadoModal(id = null) {
     } else {
         document.getElementById('pf-fecha').value = new Date().toLocaleDateString('sv-SE');
     }
+      document.getElementById('pf-nacionalidad').value = 'V';
 
-    setPhoneFields('pf-prefijo', 'pf-telefono', ''); // Resetea prefijo y número
+    setPhoneFields('pf-prefijo', 'pf-telefono', ''); 
     document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
     if (id) {
         const r = pensionadosData.find(x => x.id === id);
+        document.getElementById('pf-nacionalidad').value = r.nacionalidad || 'V';
         document.getElementById('pf-nombre').value = r.nombre || '';
         document.getElementById('pf-cedula').value = r.cedula || '';
         document.getElementById('pf-fnac').value = r.fechaNac || '';
@@ -546,6 +585,7 @@ function lookupCedulaPens() {
         else document.getElementById('pf-edad').value = match.edad || '';
         document.getElementById('pf-genero').value = match.genero || '';
         setPhoneFields('pf-prefijo', 'pf-telefono', match.telefono);
+        document.getElementById('pf-nacionalidad').value = match.nacionalidad || 'V'; 
         if (match.analista) document.getElementById('pf-analista').value = match.analista;
         if (match.estado) document.getElementById('pf-estado').value = match.estado;
         if (match.municipio) document.getElementById('pf-municipio').value = match.municipio;
@@ -593,6 +633,7 @@ async function savePensionado() {
     if (isSavingPens) return;          // bloquear doble clic
     const nombre = document.getElementById('pf-nombre').value.trim();
     const cedula = document.getElementById('pf-cedula').value.trim();
+    const nacionalidad = document.getElementById('pf-nacionalidad').value;
     const mes = document.getElementById('pf-mes').value;
     const fecha = document.getElementById('pf-fecha').value;
     if (!nombre || !cedula || !mes || !fecha) { toast('Complete los campos obligatorios (*)', 'error'); return; }
@@ -601,6 +642,7 @@ async function savePensionado() {
     const pfTelefono = pfTelCuerpo ? (pfPrefijo + pfTelCuerpo) : '';
 
     const data = {
+        nacionalidad, 
         fecha,
         nombre, cedula,
         edad: document.getElementById('pf-edad').value,
@@ -678,7 +720,7 @@ function viewPensionado(id) {
     <div class="detail-header">
       <div class="detail-name">${r.nombre}</div>
       <div class="detail-meta">
-        <div class="detail-meta-item">CI: <span>${r.cedula}</span></div>
+        <div class="detail-meta-item">CI: <span>${r.nacionalidad || 'V'}-${r.cedula}</span></div>
         <div class="detail-meta-item">Edad: <span>${r.edad || '—'}</span></div>
         <div class="detail-meta-item">Género: <span>${r.genero === 'M' ? 'Masculino' : r.genero === 'F' ? 'Femenino' : '—'}</span></div>
         <div class="detail-meta-item">Mes: <span>${r.mes}</span></div>
@@ -864,23 +906,26 @@ async function exportAtencionExcel() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Atención");
 
-    worksheet.columns = [
+     worksheet.columns = [
         { header: 'N°', key: 'n', width: 6 },
         { header: 'Fecha', key: 'fecha', width: 15 },
         { header: 'Servicio', key: 'servicio', width: 35 },
         { header: 'Cédula', key: 'cedula', width: 15 },
         { header: 'Nombres y Apellidos', key: 'nombre', width: 45 },
-        { header: 'Teléfono', key: 'telefono', width: 20 }
+        { header: 'Teléfono', key: 'telefono', width: 20 },
+        { header: 'Empresa', key: 'empresa', width: 30 },
+        { header: 'RIF', key: 'rif', width: 15 }
     ];
-
     list.forEach((r, i) => {
         worksheet.addRow({
             n: i + 1,
             fecha: r.fecha || '-',
             servicio: r.servicio || '-',
-            cedula: r.cedula || '-',
+            cedula: `${r.nacionalidad || 'V'}-${r.cedula}`,
             nombre: r.nombre || '-',
-            telefono: r.telefono || '-'
+            telefono: r.telefono || '-',
+            empresa: r.empresa || '-',
+            rif: r.rif || '-'
         });
     });
 
@@ -960,13 +1005,16 @@ async function exportPensionadosExcel() {
     list.forEach((r, i) => {
         const rowData = {};
         headers.forEach(x => {
-            if (x.k === 'n') rowData[x.k] = i + 1;
-            else if (x.k === 'fecha') {
-                rowData[x.k] = r.fecha || r.fechaRegistro || new Date().toLocaleDateString('sv-SE');
-            }
-            else {
-                rowData[x.k] = r[x.k] || '-';
-            }
+             if (x.k === 'n') rowData[x.k] = i + 1;
+                else if (x.k === 'fecha') {
+                    rowData[x.k] = r.fecha || r.fechaRegistro || new Date().toLocaleDateString('sv-SE');
+                }
+                else if (x.k === 'cedula') {
+                    rowData[x.k] = `${r.nacionalidad || 'V'}-${r.cedula}`;
+                }
+                else {
+                    rowData[x.k] = r[x.k] || '-';
+                }
         });
         worksheet.addRow(rowData);
     });
