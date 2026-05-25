@@ -22,7 +22,7 @@
 <body>
 
     <!-- login -->
-    <div id="login-screen" class="login-overlay">
+     <div id="login-screen" class="login-overlay">
         <div class="login-glow login-glow-1"></div>
         <div class="login-glow login-glow-2"></div>
         <div class="login-card">
@@ -34,32 +34,74 @@
                 <div class="login-brand-name">IVSS</div>
                 <div class="login-brand-office">OA Cabimas</div>
             </div>
-
             <div class="login-divider"></div>
             <p class="login-subtitle">Acceso restringido &mdash; Personal autorizado</p>
-
             <!-- Error -->
             <div id="login-error" class="login-error hidden"></div>
-
-            <!-- Form -->
-            <div class="login-field">
-                <label for="login-user">Usuario</label>
-                <input type="text" id="login-user" placeholder="admin" autocomplete="username"
-                    onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
-            </div>
-            <div class="login-field">
-                <label for="login-pass">Contraseña</label>
-                <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
-                    onkeydown="if(event.key==='Enter')handleLogin()">
-            </div>
-
-            <button id="login-btn" class="login-btn" onclick="handleLogin()">
-                Ingresar al Sistema
-            </button>
-
+            <!-- 1. CONTENEDOR DE INICIO DE SESIÓN -->
+            <div id="login-form-fields">
+                <div class="login-field">
+                    <label for="login-user">Usuario</label>
+                    <input type="text" id="login-user" placeholder="admin" autocomplete="username"
+                        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+                </div>
+                <div class="login-field">
+                    <label for="login-pass">Contraseña</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+                            onkeydown="if(event.key==='Enter')handleLogin()" style="padding-right: 40px; width: 100%;">
+                        
+                        <!-- Botón del Ojo -->
+                        <button type="button" id="login-toggle-pass" style="position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #888; outline: none;">
+                            <!-- Icono Ojo Abierto -->
+                            <svg id="eye-open" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <!-- Icono Ojo Cerrado -->
+                            <svg id="eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <!-- Enlace de ¿Olvidaste la contraseña? -->
+                <div style="display: flex; justify-content: flex-end; align-items: center; margin: -5px 0 12px 0; font-size: 13px;">
+                    <a href="#" id="login-forgot-btn" style="color: var(--gold); text-decoration: none; font-weight: 500;">¿Olvidaste la contraseña?</a>
+                </div>
+                <!-- Recordar contraseña -->
+                <div style="margin-bottom: 20px; font-size: 13px;">
+                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-muted);">
+                        <input type="checkbox" id="login-remember-me" style="cursor: pointer;"> Recordar contraseña
+                    </label>
+                </div>
+                <button id="login-btn" class="login-btn" onclick="handleLogin()">
+                    Ingresar al Sistema
+                </button>
+            </div> 
+            <div id="recovery-form-fields" style="display: none;">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
+                    Ingresa tu correo electrónico registrado y te enviaremos un enlace para restablecer tu contraseña.
+                </p>
+                <div class="login-field">
+                    <label for="recovery-email">Correo Electrónico *</label>
+                    <input type="email" id="recovery-email" placeholder="correo@ejemplo.com"
+                        onkeydown="if(event.key==='Enter')handlePasswordRecovery()">
+                </div>
+                <button id="recovery-btn" class="login-btn" onclick="handlePasswordRecovery()" style="margin-bottom: 15px;">
+                    Enviar Enlace de Recuperación
+                </button>
+                <div style="text-align: center; font-size: 13px; margin-top: 10px;">
+                    <a href="#" id="login-back-btn" style="color: var(--gold); text-decoration: none; font-weight: 500;">Volver al Inicio de Sesión</a>
+                </div>
+            </div> <!-- Cierra recovery-form-fields -->
+            <!-- Footer interno -->
             <div class="login-footer">IVSS &middot; Cabimas, Zulia &middot; 2026</div>
-        </div>
-    </div>
+        </div> 
+    </div> 
 
     <!-- sidebar -->
     <nav class="sidebar">
@@ -86,7 +128,7 @@
                         <rect x="3" y="12" width="4" height="9" />
                         <rect x="10" y="6" width="4" height="15" />
                         <rect x="17" y="2" width="4" height="19" />
-                    </svg></span> Dashboard
+                    </svg></span> Panel de Control
             </div>
             <div class="nav-section-label">Módulos</div>
             <div class="nav-item" onclick="navigate('atencion')">
@@ -107,7 +149,7 @@
                         <circle cx="9" cy="7" r="4" />
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg></span> Censo de Pensionados
+                    </svg></span> Censo de Pensionados 
             </div>
             <div class="nav-section-label">Análisis</div>
             <div class="nav-item" onclick="navigate('reportes')">
@@ -160,14 +202,14 @@
         <div>
             <div class="section-header">
                 <div>
-                    <div class="section-title">Panel General</div>
-                    <div class="section-sub">Resumen de atención · Oficina Administrativa Cabimas 2026</div>
+                    <div class="section-title">General</div>
+                    <div class="section-sub">Resumen de atención · Oficina Administrativa Cabimas</div>
                 </div>
             </div>
             <div class="stat-grid" id="dash-stats"></div>
             <div class="charts-grid">
                 <div class="chart-box">
-                    <div class="chart-title">Atendidos por Mes · 2026</div>
+                    <div class="chart-title">Atención al Público por Mes · 2026</div>
                     <canvas id="chart-monthly"></canvas>
                 </div>
                 <div class="chart-box">
@@ -255,7 +297,7 @@
             </div>
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">Padrón de Pensionados</div>
+                    <div class="card-title">Gestión de Pensionados</div>
                     <div class="filters-row" style="margin:0">
                         <input class="filter-input" type="text" id="pens-search" placeholder="Buscar nombre o cédula…"
                             oninput="renderPensTable()">
@@ -273,6 +315,9 @@
                             <option value="INVALIDEZ">Invalidez</option>
                             <option value="AMOR MAYOR">Amor Mayor</option>
                             <option value="VIA DE GRACIAS">Vía de Gracias</option>
+                            <option value="SOBREVIVIENTE">Sobreviviente</option>
+                            <option value="TRABAJO/AUTORIZACION">Trabajo / Autorización</option>
+                            <option value="AMOR MAYOR/SOBREVIVIENTE">Amor Mayor / Sobreviviente</option>
                         </select>
                     </div>
                 </div>
@@ -281,6 +326,7 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Fecha</th> 
                                 <th>Nombres y Apellidos</th>
                                 <th>Cédula</th>
                                 <th>Edad</th>
@@ -319,23 +365,45 @@
                     <div class="card-title">Generador de Reportes (Excel)</div>
                     <div class="filters-row" style="margin:0; align-items:flex-end;">
                         <div style="display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase">Desde (Fecha)</span>
+                            <span
+                                style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase">Desde
+                                (Fecha)</span>
                             <input type="date" class="filter-input" id="export-desde">
                         </div>
                         <div style="display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase">Hasta (Fecha)</span>
+                            <span
+                                style="font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase">Hasta
+                                (Fecha)</span>
                             <input type="date" class="filter-input" id="export-hasta">
                         </div>
                         <div style="display:flex; gap:8px;">
-                            <button class="btn btn-outline" style="height:36px; border-color:#217346; color:#217346" onclick="exportAtencionExcel()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Atención</button>
-                            <button class="btn btn-outline" style="height:36px; border-color:#217346; color:#217346" onclick="exportPensionadosExcel()"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> Pensionados</button>
+                            <button class="btn btn-outline" style="height:36px; border-color:#217346; color:#217346"
+                                onclick="exportAtencionExcel()"><svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                    height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10 9 9 9 8 9" />
+                                </svg> Atención</button>
+                            <button class="btn btn-outline" style="height:36px; border-color:#217346; color:#217346"
+                                onclick="exportPensionadosExcel()"><svg xmlns="http://www.w3.org/2000/svg" width="16"
+                                    height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="16" y1="13" x2="8" y2="13" />
+                                    <line x1="16" y1="17" x2="8" y2="17" />
+                                    <polyline points="10 9 9 9 8 9" />
+                                </svg> Pensionados</button>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="card" style="margin-bottom:18px">
                 <div class="card-header">
-                    <div class="card-title">Resumen Anual por Mes</div>
+                    <div class="card-title">Resumen Anual por Mes de Pensionados</div>
                 </div>
                 <div class="card-body">
                     <div class="report-month-grid" id="rep-month-grid"></div>
@@ -408,10 +476,11 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Cédula de Identidad *</label>
-                        <input class="form-input" type="text" id="af-cedula" placeholder="Ej: 7862369"
-                            onblur="lookupCedulaAten()"
+                        <input class="form-input" type="text" id="af-cedula" placeholder="Ej: 7862369" minlength="7"
+                            maxlength="8" onblur="lookupCedulaAten()"
                             onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCedulaAten();}">
-                        <span id="af-cedula-status" style="font-size:11.5px;margin-top:5px;display:block;min-height:16px"></span>
+                        <span id="af-cedula-status"
+                            style="font-size:11.5px;margin-top:5px;display:block;min-height:16px"></span>
                     </div>
                     <div class="form-group form-full">
                         <label class="form-label">Nombres y Apellidos *</label>
@@ -419,7 +488,19 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Teléfono</label>
-                        <input class="form-input" type="text" id="af-telefono" placeholder="Ej: 0412-1234567">
+
+                        <div style="display: flex; gap: 8px;">
+                            <select class="form-select" id="af-prefijo" style="width: 35%;">
+                                <option value="0412">0412</option>
+                                <option value="0414">0414</option>
+                                <option value="0424">0424</option>
+                                <option value="0416">0416</option>
+                                <option value="0426">0426</option>
+                                <option value="0422">0422</option>
+                            </select>
+                            <input class="form-input" type="text" id="af-telefono" placeholder="1234567" maxlength="7"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 65%;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -455,11 +536,16 @@
                         </svg> Datos Personales</span></div>
                 <div class="form-grid">
                     <div class="form-group">
+                        <label class="form-label">Fecha *</label>
+                        <input class="form-input" type="date" id="pf-fecha" required>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Cédula de Identidad *</label>
-                        <input class="form-input" type="text" id="pf-cedula" placeholder="Ej: 7480674"
-                            onblur="lookupCedulaPens()"
+                        <input class="form-input" type="text" id="pf-cedula" placeholder="Ej: 7480674" minlength="7"
+                            maxlength="8" onblur="lookupCedulaPens()"
                             onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCedulaPens();}">
-                        <span id="pf-cedula-status" style="font-size:11.5px;margin-top:5px;display:block;min-height:16px"></span>
+                        <span id="pf-cedula-status"
+                            style="font-size:11.5px;margin-top:5px;display:block;min-height:16px"></span>
                     </div>
                     <div class="form-group form-full">
                         <label class="form-label">Nombre y Apellido *</label>
@@ -471,7 +557,8 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Edad</label>
-                        <input class="form-input" type="number" id="pf-edad" placeholder="Calculada" readonly style="background:#f4f6f8;cursor:not-allowed">
+                        <input class="form-input" type="number" id="pf-edad" placeholder="Calculada" readonly
+                            style="background:#f4f6f8;cursor:not-allowed">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Género *</label>
@@ -483,7 +570,18 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Teléfono</label>
-                        <input class="form-input" type="text" id="pf-telefono">
+                        <div style="display: flex; gap: 8px;">
+                            <select class="form-select" id="pf-prefijo" style="width: 35%;">
+                                <option value="0412">0412</option>
+                                <option value="0414">0414</option>
+                                <option value="0416">0416</option>
+                                <option value="0422">0422</option>
+                                <option value="0424">0424</option>
+                                <option value="0426">0426</option>
+                            </select>
+                            <input class="form-input" type="text" id="pf-telefono" placeholder="1234567" maxlength="7"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')" style="width: 65%;">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Mes de Atención *</label>
@@ -579,8 +677,16 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tipo de Pensión</label>
-                        <input class="form-input" type="text" id="pf-tipo-pension"
-                            placeholder="Ej: TRABAJO, INVALIDEZ, AMOR MAYOR…">
+                        <select id="pf-tipo-pension" class="form-select" required>
+                            <option value="">Seleccionar...</option>
+                            <option value="TRABAJO">TRABAJO</option>
+                            <option value="INVALIDEZ">INVALIDEZ</option>
+                            <option value="AMOR MAYOR">AMOR MAYOR</option>
+                            <option value="VIA DE GRACIA">VIA DE GRACIA</option>
+                            <option value="SOBREVIVIENTE">SOBREVIVIENTE</option>
+                            <option value="TRABAJO/AUTORIZACION">TRABAJO / AUTORIZACION</option>
+                            <option value="AMOR MAYOR/SOBREVIVIENTE">AMOR MAYOR / SOBREVIVIENTE</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Banco donde Cobra</label>
@@ -741,4 +847,208 @@
     <script src="./scripts/main.js"></script>
 </body>
 
+<!-- MODAL DE MI PERFIL REDISEÑADO -->
+    <div id="modal-perfil" class="modal-overlay hidden">
+        <!-- Estilos encapsulados para no interferir con el CSS global -->
+        <style>
+            .perfil-card {
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(200, 146, 42, 0.35);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(200, 146, 42, 0.08);
+                border-radius: 20px;
+                overflow: hidden;
+                position: relative;
+                max-width: 440px;
+                width: 90%;
+                margin: auto;
+            }
+            .perfil-glow-bar {
+                height: 5px;
+                background: linear-gradient(90deg, #c8922a 0%, #f3c66f 50%, #c8922a 100%);
+            }
+            .perfil-avatar-wrap {
+                display: flex;
+                justify-content: center;
+                margin: 25px 0 15px 0;
+                position: relative;
+            }
+            .perfil-avatar {
+                width: 68px;
+                height: 68px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #c8922a 0%, #f3c66f 100%);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+                font-weight: 800;
+                box-shadow: 0 8px 20px rgba(200, 146, 42, 0.3);
+                border: 3px solid #fff;
+                z-index: 2;
+                user-select: none;
+            }
+            .perfil-avatar-pulse {
+                position: absolute;
+                width: 68px;
+                height: 68px;
+                border-radius: 50%;
+                background: rgba(200, 146, 42, 0.35);
+                animation: avatarPulse 2.2s infinite ease-out;
+                z-index: 1;
+            }
+            @keyframes avatarPulse {
+                0% { transform: scale(0.95); opacity: 0.8; }
+                50% { transform: scale(1.15); opacity: 0.4; }
+                100% { transform: scale(1.35); opacity: 0; }
+            }
+            .perfil-field-group {
+                margin-bottom: 18px;
+            }
+            .perfil-label {
+                color: #1e293b;
+                font-weight: 600;
+                font-size: 13px;
+                display: block;
+                margin-bottom: 6px;
+            }
+            .perfil-input-container {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            .perfil-input-icon {
+                position: absolute;
+                left: 12px;
+                color: #94a3b8;
+                pointer-events: none;
+            }
+            .perfil-input {
+                width: 100%;
+                padding: 10px 12px 10px 38px !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 10px !important;
+                color: #1e293b !important;
+                font-size: 14px !important;
+                background-color: #f8fafc !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+            .perfil-input:focus {
+                border-color: #c8922a !important;
+                background-color: #fff !important;
+                box-shadow: 0 0 0 3.5px rgba(200, 146, 42, 0.18) !important;
+                outline: none;
+            }
+            .strength-bar-container {
+                display: flex;
+                gap: 5px;
+                margin-top: 6px;
+            }
+            .strength-segment {
+                height: 5px;
+                flex: 1;
+                background-color: #e2e8f0;
+                border-radius: 3px;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .perfil-btn-save {
+                background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                color: #fff;
+                border: 1px solid rgba(200, 146, 42, 0.2);
+                transition: all 0.3s ease;
+            }
+            .perfil-btn-save:hover {
+                transform: translateY(-1.5px);
+                box-shadow: 0 5px 15px rgba(200, 146, 42, 0.25);
+                border-color: #c8922a;
+            }
+        </style>
+        <div class="perfil-card">
+            <!-- Barra de brillo superior -->
+            <div class="perfil-glow-bar"></div>
+            <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 15px 24px;">
+                <h3 class="modal-title" style="color: #1e293b; font-size: 17px; font-weight: 700;">Perfil de Usuario</h3>
+                <button class="modal-close" onclick="closePerfilModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="modal-body" style="padding: 24px;">
+                <!-- Avatar Pulsante -->
+                <div class="perfil-avatar-wrap">
+                    <div id="perfil-avatar-pulse-el" class="perfil-avatar-pulse"></div>
+                    <div id="perfil-avatar-text" class="perfil-avatar">U</div>
+                </div>
+                <p style="font-size: 13px; color: #64748b; text-align: center; margin-bottom: 24px; line-height: 1.5;">
+                    Personaliza tus credenciales para el acceso administrativo al Sistema de Atención del IVSS.
+                </p>
+                <!-- Input Usuario -->
+                <div class="perfil-field-group">
+                    <label class="perfil-label">Nombre de Usuario</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="perfil-input-container" style="flex: 1;">
+                            <!-- Icono de usuario -->
+                            <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <input type="text" id="perfil-user" class="perfil-input" placeholder="admin">
+                        </div>
+                        <span style="font-size: 13px; color: #64748b; font-weight: 700;">@ivss.gob.ve</span>
+                    </div>
+                </div>
+                <!-- Input Contraseña Nueva -->
+                <div class="perfil-field-group">
+                    <label class="perfil-label">Nueva Contraseña</label>
+                    <div class="perfil-input-container">
+                        <!-- Icono de candado -->
+                        <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" id="perfil-pass" class="perfil-input" placeholder="Mínimo 7 y máximo 15 caracteres" style="padding-right: 40px !important;" maxlength="15">
+                        
+                        <!-- Botón Ojo -->
+                        <button type="button" id="perfil-toggle-pass" style="position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; outline: none;">
+                            <svg id="perfil-eye-open" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            <svg id="perfil-eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                                <line x1="2" y1="2" x2="22" y2="22"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Barra de fortaleza por segmentos -->
+                    <div style="margin-top: 7px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
+                            <span style="color: #64748b;">Seguridad de la clave:</span>
+                            <span id="pass-strength-text" style="font-weight: 700; color: #94a3b8;">Vacía</span>
+                        </div>
+                        <div class="strength-bar-container">
+                            <div id="strength-seg-1" class="strength-segment"></div>
+                            <div id="strength-seg-2" class="strength-segment"></div>
+                            <div id="strength-seg-3" class="strength-segment"></div>
+                            <div id="strength-seg-4" class="strength-segment"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Input Confirmar Contraseña -->
+                <div class="perfil-field-group" style="margin-bottom: 25px;">
+                    <label class="perfil-label">Confirmar Contraseña</label>
+                    <div class="perfil-input-container">
+                        <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        <input type="password" id="perfil-pass-confirm" class="perfil-input" placeholder="Confirma tu nueva clave" maxlength="15">
+                    </div>
+                </div>
+                <!-- Acciones -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                    <button class="btn btn-outline" onclick="closePerfilModal()" style="border-radius: 10px; padding: 10px 20px;">Cancelar</button>
+                    <button id="perfil-save-btn" class="btn perfil-btn-save" onclick="savePerfilCredentials()" style="border-radius: 10px; padding: 10px 20px; font-weight: 600;">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </html>

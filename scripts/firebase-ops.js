@@ -24,37 +24,115 @@ function showLoginScreen() {
     document.getElementById('login-user').value = '';
     document.getElementById('login-pass').value = '';
     document.getElementById('topbar-user').style.display = 'none';
-    document.getElementById('btn-logout').style.display  = 'none';
+    document.getElementById('btn-logout').style.display = 'none';
 }
 
 function hideLoginScreen() {
     document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('topbar-user').style.display  = 'flex';
-    document.getElementById('btn-logout').style.display   = 'flex';
+    document.getElementById('topbar-user').style.display = 'flex';
+    document.getElementById('btn-logout').style.display = 'flex';
 }
 
 // ── AUTH ACTIONS ─────────────────────────────────────
 async function handleLogin() {
     const user = (document.getElementById('login-user').value || '').trim();
-    const pass  = document.getElementById('login-pass').value;
+    const pass = document.getElementById('login-pass').value;
     if (!user || !pass) { showLoginError('Complete usuario y contraseña.'); return; }
     document.getElementById('login-error').classList.add('hidden');
     setLoginLoading(true);
     try {
         await auth.signInWithEmailAndPassword(user + '@ivss.gob.ve', pass);
         // onAuthStateChanged handles the rest
+
+        // GUARDAR CREDENCIALES SI "RECORDAR CONTRASEÑA" ESTÁ MARCADO
+        const rememberMe = document.getElementById('login-remember-me').checked;
+        if (rememberMe) {
+            localStorage.setItem('remember_user', user); 
+            localStorage.setItem('remember_pass', pass);
+            localStorage.setItem('remember_checked', 'true');
+        } else {
+            localStorage.removeItem('remember_user');
+            localStorage.removeItem('remember_pass');
+            localStorage.removeItem('remember_checked');
+        }
     } catch (e) {
         setLoginLoading(false);
         const msgs = {
-            'auth/user-not-found':      'Usuario no encontrado.',
-            'auth/wrong-password':      'Contraseña incorrecta.',
-            'auth/invalid-credential':  'Credenciales inválidas.',
-            'auth/invalid-email':       'Formato de usuario incorrecto.',
-            'auth/too-many-requests':   'Demasiados intentos. Espere un momento.',
+            'auth/user-not-found': 'Usuario no encontrado.',
+            'auth/wrong-password': 'Contraseña incorrecta.',
+            'auth/invalid-credential': 'Credenciales inválidas.',
+            'auth/invalid-email': 'Formato de usuario incorrecto.',
+            'auth/too-many-requests': 'Demasiados intentos. Espere un momento.',
         };
         showLoginError(msgs[e.code] || 'Error de autenticación (' + e.code + ').');
     }
 }
+
+function inicializarEventosLogin() {
+    // 1. Mostrar/Ocultar contraseña con el botón del ojo
+    const togglePassBtn = document.getElementById('login-toggle-pass');
+    if (togglePassBtn) {
+        togglePassBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            const passInput = document.getElementById('login-pass');
+            const eyeOpen = document.getElementById('eye-open');
+            const eyeClosed = document.getElementById('eye-closed');
+
+            if (passInput && eyeOpen && eyeClosed) {
+                if (passInput.type === 'password') {
+                    passInput.type = 'text';
+                    eyeOpen.style.display = 'none';
+                    eyeClosed.style.display = 'block';
+                } else {
+                    passInput.type = 'password';
+                    eyeOpen.style.display = 'block';
+                    eyeClosed.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    const forgotBtn = document.getElementById('login-forgot-btn');
+    if (forgotBtn) {
+        forgotBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('login-form-fields').style.display = 'none';
+            document.getElementById('recovery-form-fields').style.display = 'block';
+
+            // Limpiar errores anteriores y restaurar color del recuadro
+            const err = document.getElementById('login-error');
+            if (err) {
+                err.classList.add('hidden');
+                err.style.backgroundColor = '';
+                err.style.color = '';
+                err.style.border = '';
+            }
+        });
+    }
+
+    const backBtn = document.getElementById('login-back-btn');
+    if (backBtn) {
+        backBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('recovery-form-fields').style.display = 'none';
+            document.getElementById('login-form-fields').style.display = 'block';
+            const err = document.getElementById('login-error');
+            if (err) {
+                err.classList.add('hidden');
+                err.style.backgroundColor = '';
+                err.style.color = '';
+                err.style.border = '';
+            }
+        });
+    }
+}
+// Inicialización segura del DOM
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarEventosLogin);
+} else {
+    inicializarEventosLogin();
+}
+
 
 async function handleLogout() {
     await auth.signOut();
@@ -66,8 +144,27 @@ async function loadAllData() {
         db.collection('atencion').orderBy('fecha', 'desc').get(),
         db.collection('pensionados').get()
     ]);
-    atencionData    = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    atencionData = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     pensionadosData = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // NUEVO: Ordenar localmente de más reciente a más antiguo al cargar
+    pensionadosData.sort((a, b) => {
+        const fA = a.fecha || a.fechaRegistro || '';
+        const fB = b.fecha || b.fechaRegistro || '';
+        return fB.localeCompare(fA);
+    });
+}
+
+function getDailyStats() {
+    const hoy = new Date().toLocaleDateString('sv-SE');
+    const atencionesHoy = atencionData.filter(r => r.fecha === hoy).length;
+    // Compara el nuevo campo de fecha y la fecha de registro automática
+    const pensionadosHoy = pensionadosData.filter(r => (r.fecha === hoy || r.fechaRegistro === hoy)).length;
+    return {
+        atencion: atencionesHoy,
+        pensionados: pensionadosHoy,
+        total: atencionesHoy + pensionadosHoy
+    };
 }
 
 // ── FIRESTORE CRUD · ATENCIÓN ─────────────────────────
@@ -87,8 +184,15 @@ async function fsDeleteAten(id) {
 
 // ── FIRESTORE CRUD · PENSIONADOS ──────────────────────
 async function fsAddPens(data) {
-    const ref = await db.collection('pensionados').add(data);
-    pensionadosData.push({ id: ref.id, ...data });
+    const hoy = new Date().toLocaleDateString('sv-SE');
+    const fechaReg = data.fecha || hoy;
+    const dataConFecha = {
+        fechaRegistro: fechaReg,
+        timestamp: Date.now(),
+        ...data
+    };
+    const ref = await db.collection('pensionados').add(dataConFecha);
+    pensionadosData.unshift({ id: ref.id, ...dataConFecha });
 }
 async function fsUpdatePens(id, data) {
     await db.collection('pensionados').doc(id).update(data);
@@ -103,7 +207,7 @@ async function fsDeletePens(id) {
 // ── FIRESTORE CRUD · SYNC CIUDADANO ──────────────────────
 async function fsSyncCiudadano(cedula, dataToSync) {
     if (!cedula || !dataToSync) return;
-    
+
     const batch = db.batch();
     let hasUpdates = false;
 
@@ -127,7 +231,7 @@ async function fsSyncCiudadano(cedula, dataToSync) {
         const atenData = {};
         if (cleanData.nombre !== undefined) atenData.nombre = cleanData.nombre;
         if (cleanData.telefono !== undefined) atenData.telefono = cleanData.telefono;
-        
+
         if (Object.keys(atenData).length > 0 && needsUpdate(r, atenData)) {
             batch.update(db.collection('atencion').doc(r.id), atenData);
             Object.assign(r, atenData); // Update memory
@@ -169,9 +273,8 @@ auth.onAuthStateChanged(async (user) => {
         // Show user chip in topbar
         const name = user.email.split('@')[0];
         const display = name.charAt(0).toUpperCase() + name.slice(1);
-        document.getElementById('user-display-name').textContent = display;
-        document.getElementById('user-avatar').textContent = display.charAt(0).toUpperCase();
-
+        document.getElementById('user-display-name').textContent = "Usuario";
+        document.getElementById('user-avatar').textContent = "U";
         updateDate();
         navigate('dashboard');
     } else {
@@ -180,3 +283,19 @@ auth.onAuthStateChanged(async (user) => {
         setLoginLoading(false);
     }
 });
+
+// Actualiza el usuario y contraseña del administrador en Firebase
+async function fsUpdateAdminProfile(nuevoUser, nuevaPass) {
+    const user = auth.currentUser;
+    if (!user) throw new Error("No hay usuario autenticado.");
+    const emailOriginal = user.email;
+    const nuevoEmail = nuevoUser + "@ivss.gob.ve";
+    // 1. Si cambió el nombre de usuario (email)
+    if (nuevoEmail !== emailOriginal) {
+        await user.updateEmail(nuevoEmail);
+    }
+    // 2. Si se ingresó una nueva contraseña
+    if (nuevaPass) {
+        await user.updatePassword(nuevaPass);
+    }
+}

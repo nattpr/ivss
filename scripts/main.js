@@ -1,6 +1,6 @@
 
 // ── DATA STORE (Firestore — see firebase-ops.js)
-let atencionData    = [];
+let atencionData = [];
 let pensionadosData = [];
 let editAtenId = null;
 let editPensId = null;
@@ -46,6 +46,33 @@ function genTag(g) {
         : g === 'F' ? `<span class="tag tag-f">Fem.</span>` : '—';
 }
 
+function getLocalDateStr() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function setPhoneFields(prefId, telId, rawPhone) {
+    const prefEl = document.getElementById(prefId);
+    const telEl = document.getElementById(telId);
+    if (!prefEl || !telEl) return;
+    if (!rawPhone) {
+        prefEl.value = prefEl.options[0].value;
+        telEl.value = '';
+        return;
+    }
+    const clean = rawPhone.replace(/\D/g, '');
+    if (clean.length >= 11) {
+        prefEl.value = clean.slice(0, 4);
+        telEl.value = clean.slice(4);
+    } else {
+        prefEl.value = prefEl.options[0].value;
+        telEl.value = clean;
+    }
+}
+
 // ── TOAST 
 function toast(msg, type = 'success') {
     const c = document.getElementById('toast-container');
@@ -63,7 +90,7 @@ function navigate(view) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const idx = { dashboard: 0, atencion: 1, pensionados: 2, reportes: 3 };
     document.querySelectorAll('.nav-item')[idx[view]]?.classList.add('active');
-    const titles = { dashboard: 'Dashboard', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas' };
+    const titles = { dashboard: 'Panel de Control', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas' };
     document.getElementById('topbar-title').textContent = titles[view];
     renderView(view);
 }
@@ -93,19 +120,20 @@ function renderDashboard() {
     const atenMes = atencionData.filter(r => getMes(r.fecha) === mesActual).length;
     const pensMes = pensionadosData.filter(r => r.mes === mesActual).length;
 
+    const dailyStats = getDailyStats();
     document.getElementById('dash-stats').innerHTML = `
     <div class="stat-card">
-      <div class="stat-label">Total Usuarios Atendidos</div>
+      <div class="stat-label">Total Atención Al Público</div>
       <div class="stat-value">${totalAten}</div>
       <div class="stat-sub-text">Registros este año</div>
     </div>
     <div class="stat-card gold">
       <div class="stat-label">Pensionados Registrados</div>
       <div class="stat-value">${totalPens}</div>
-      <div class="stat-sub-text">Censo de pensionados</div>
+      <div class="stat-sub-text">Registros este año</div>
     </div>
     <div class="stat-card green">
-      <div class="stat-label">Atendidos Este Mes</div>
+      <div class="stat-label">Atención Al Público Este Mes</div>
       <div class="stat-value">${atenMes}</div>
       <div class="stat-sub-text">${mesActual || 'Mes actual'}</div>
     </div>
@@ -113,6 +141,11 @@ function renderDashboard() {
       <div class="stat-label">Pensionados Este Mes</div>
       <div class="stat-value">${pensMes}</div>
       <div class="stat-sub-text">${mesActual || 'Mes actual'}</div>
+    </div>
+    <div class="stat-card dark">
+      <div class="stat-label">Atendidos Hoy (Total)</div>
+      <div class="stat-value" style="color: var(--gold-light, #e8b04a);">${dailyStats.total}</div>
+      <div class="stat-sub-text">${dailyStats.atencion} Atención + ${dailyStats.pensionados} Censo</div>
     </div>
   `;
     drawDashCharts();
@@ -238,13 +271,15 @@ function openAtencionModal(id = null) {
         document.getElementById('af-servicio').value = r.servicio;
         document.getElementById('af-nombre').value = r.nombre;
         document.getElementById('af-cedula').value = r.cedula;
-        document.getElementById('af-telefono').value = r.telefono || '';
+        // Cargamos el prefijo y número por separado
+        setPhoneFields('af-prefijo', 'af-telefono', r.telefono);
     } else {
-        document.getElementById('af-fecha').value = new Date().toISOString().split('T')[0];
+        document.getElementById('af-fecha').value = getLocalDateStr(); // CAMBIO AQUÍ
         document.getElementById('af-servicio').value = '';
         document.getElementById('af-nombre').value = '';
         document.getElementById('af-cedula').value = '';
-        document.getElementById('af-telefono').value = '';
+        // Limpiamos los campos
+        setPhoneFields('af-prefijo', 'af-telefono', '');
     }
     document.getElementById('modal-atencion').classList.remove('hidden');
 }
@@ -269,14 +304,14 @@ function lookupCedulaAten() {
     const match = prevAten || prevPens;
 
     if (match) {
-        document.getElementById('af-nombre').value   = match.nombre   || '';
-        document.getElementById('af-telefono').value = match.telefono || '';
+        document.getElementById('af-nombre').value = match.nombre || '';
+        setPhoneFields('af-prefijo', 'af-telefono', match.telefono);
         if (status) {
             status.textContent = '✓ Ciudadano registrado — datos pre-cargados';
             status.style.color = '#1a7a4a';
         }
     } else {
-        document.getElementById('af-nombre').value   = '';
+        document.getElementById('af-nombre').value = '';
         document.getElementById('af-telefono').value = '';
         if (status) {
             status.textContent = '• Ciudadano nuevo — complete los datos';
@@ -291,7 +326,9 @@ async function saveAtencion() {
     const servicio = document.getElementById('af-servicio').value;
     const nombre = document.getElementById('af-nombre').value.trim();
     const cedula = document.getElementById('af-cedula').value.trim();
-    const telefono = document.getElementById('af-telefono').value.trim();
+    const prefijo = document.getElementById('af-prefijo').value;
+    const telCuerpo = document.getElementById('af-telefono').value.trim();
+    const telefono = telCuerpo ? (prefijo + telCuerpo) : '';
     if (!fecha || !servicio || !nombre || !cedula) { toast('Complete los campos obligatorios (*)', 'error'); return; }
 
     isSavingAten = true;
@@ -305,10 +342,10 @@ async function saveAtencion() {
         }
         // Sincronizar datos personales con el resto de registros
         await fsSyncCiudadano(cedula, { nombre, telefono });
-        
+
         closeAtencionModal();
         renderAtencionTable();
-    } catch(e) {
+    } catch (e) {
         toast('Error al guardar: ' + e.message, 'error');
     } finally {
         isSavingAten = false;
@@ -324,7 +361,7 @@ async function deleteAtencion(id) {
         await fsDeleteAten(id);
         toast('Registro eliminado', 'error');
         renderAtencionTable();
-    } catch(e) { toast('Error al eliminar', 'error'); }
+    } catch (e) { toast('Error al eliminar', 'error'); }
 }
 
 //  PENSIONADOS
@@ -354,7 +391,14 @@ function getFilteredPens() {
         const matchG = !genero || r.genero === genero;
         const matchP = !pension || (r.tipoPension || '').includes(pension);
         return matchS && matchM && matchG && matchP;
-    }).sort((a, b) => a.nombre.localeCompare(b.nombre));
+     }).sort((a, b) => {
+        const fA = a.fecha || a.fechaRegistro || '';
+        const fB = b.fecha || b.fechaRegistro || '';
+        if (fB !== fA) {
+            return fB.localeCompare(fA); // Más reciente primero
+        }
+        return (a.nombre || '').localeCompare(b.nombre || ''); // Orden alfabético si tienen la misma fecha
+    });
 }
 
 function renderPensTable() {
@@ -370,7 +414,12 @@ function renderPensTable() {
         tbody.innerHTML = slice.map((r, i) => `
       <tr>
         <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted)">${(pensPage - 1) * PAGE_SIZE + i + 1}</td>
-        <td><strong>${r.nombre}</strong></td>
+        <td>${fmt_date(r.fecha || r.fechaRegistro || new Date().toLocaleDateString('sv-SE'))}</td> 
+       <td title="${r.nombre}">
+                    <div style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <strong>${r.nombre}</strong>
+                    </div>
+                </td>
         <td style="font-family:'IBM Plex Mono',monospace">${r.cedula}</td>
         <td>${r.edad || '—'}</td>
         <td>${genTag(r.genero)}</td>
@@ -391,8 +440,8 @@ function renderPensTable() {
 function openPensionadoModal(id = null) {
     editPensId = id;
     document.getElementById('modal-pens-title').textContent = id ? 'Editar Pensionado' : 'Registrar Pensionado';
-    // reset
-    ['pf-nombre', 'pf-cedula', 'pf-telefono', 'pf-analista', 'pf-estado', 'pf-municipio', 'pf-parroquia', 'pf-direccion',
+    // reset 
+    ['pf-nombre', 'pf-cedula', 'pf-analista', 'pf-estado', 'pf-municipio', 'pf-parroquia', 'pf-direccion',
         'pf-centro-votacion', 'pf-tipo-pension', 'pf-banco', 'pf-consejo', 'pf-patol-tipo', 'pf-tratamiento',
         'pf-meds-tipo', 'pf-club', 'pf-num-solic', 'pf-tipo-solic'].forEach(id => {
             const el = document.getElementById(id);
@@ -402,8 +451,16 @@ function openPensionadoModal(id = null) {
     document.getElementById('pf-fnac').value = '';
     document.getElementById('pf-genero').value = '';
     document.getElementById('pf-mes').value = '';
-    document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
 
+    if (id) {
+        const r = pensionadosData.find(x => x.id === id);
+        document.getElementById('pf-fecha').value = r.fecha || r.fechaRegistro || new Date().toLocaleDateString('sv-SE');
+    } else {
+        document.getElementById('pf-fecha').value = new Date().toLocaleDateString('sv-SE');
+    }
+
+    setPhoneFields('pf-prefijo', 'pf-telefono', ''); // Resetea prefijo y número
+    document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
     if (id) {
         const r = pensionadosData.find(x => x.id === id);
         document.getElementById('pf-nombre').value = r.nombre || '';
@@ -412,7 +469,8 @@ function openPensionadoModal(id = null) {
         if (r.fechaNac) calcEdad();
         else document.getElementById('pf-edad').value = r.edad || '';
         document.getElementById('pf-genero').value = r.genero || '';
-        document.getElementById('pf-telefono').value = r.telefono || '';
+        // Cargar el teléfono separando el prefijo y los dígitos
+        setPhoneFields('pf-prefijo', 'pf-telefono', r.telefono);
         document.getElementById('pf-mes').value = r.mes || '';
         document.getElementById('pf-analista').value = r.analista || '';
         document.getElementById('pf-estado').value = r.estado || 'ZULIA';
@@ -480,7 +538,7 @@ function lookupCedulaPens() {
         if (match.fechaNac) calcEdad();
         else document.getElementById('pf-edad').value = match.edad || '';
         document.getElementById('pf-genero').value = match.genero || '';
-        document.getElementById('pf-telefono').value = match.telefono || '';
+        setPhoneFields('pf-prefijo', 'pf-telefono', match.telefono);
         if (match.analista) document.getElementById('pf-analista').value = match.analista;
         if (match.estado) document.getElementById('pf-estado').value = match.estado;
         if (match.municipio) document.getElementById('pf-municipio').value = match.municipio;
@@ -502,7 +560,7 @@ function lookupCedulaPens() {
         toggleCentroVotacion(match.cne === 'SI');
         setRadio('pf-inass', match.inass); setRadio('pf-patol', match.tienePatol);
         togglePatolFields(match.tienePatol === 'SI');
-        setRadio('pf-meds', match.tieneMeds); 
+        setRadio('pf-meds', match.tieneMeds);
         toggleMedsField(match.tieneMeds === 'SI');
         setRadio('pf-venapp', match.venapp); setRadio('pf-solic-esp', match.solicEsp);
 
@@ -529,14 +587,19 @@ async function savePensionado() {
     const nombre = document.getElementById('pf-nombre').value.trim();
     const cedula = document.getElementById('pf-cedula').value.trim();
     const mes = document.getElementById('pf-mes').value;
-    if (!nombre || !cedula || !mes) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+    const fecha = document.getElementById('pf-fecha').value;
+    if (!nombre || !cedula || !mes || !fecha) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+    const pfPrefijo = document.getElementById('pf-prefijo').value;
+    const pfTelCuerpo = document.getElementById('pf-telefono').value.trim();
+    const pfTelefono = pfTelCuerpo ? (pfPrefijo + pfTelCuerpo) : '';
 
     const data = {
+        fecha,
         nombre, cedula,
         edad: document.getElementById('pf-edad').value,
         fechaNac: document.getElementById('pf-fnac').value,
         genero: document.getElementById('pf-genero').value,
-        telefono: document.getElementById('pf-telefono').value,
+        telefono: pfTelefono, // Guardamos el teléfono completo unido
         mes, analista: document.getElementById('pf-analista').value,
         estado: document.getElementById('pf-estado').value,
         municipio: document.getElementById('pf-municipio').value,
@@ -576,7 +639,7 @@ async function savePensionado() {
 
         closePensionadoModal();
         renderPensTable();
-    } catch(e) {
+    } catch (e) {
         toast('Error al guardar: ' + e.message, 'error');
     } finally {
         isSavingPens = false;
@@ -592,7 +655,7 @@ async function deletePensionado(id) {
         await fsDeletePens(id);
         toast('Registro eliminado', 'error');
         renderPensTable();
-    } catch(e) { toast('Error al eliminar', 'error'); }
+    } catch (e) { toast('Error al eliminar', 'error'); }
 }
 
 function viewPensionado(id) {
@@ -654,16 +717,17 @@ function viewPensionado(id) {
 function renderReportes() {
     const grid = document.getElementById('rep-month-grid');
     const tbody = document.getElementById('rep-tbody');
-    let rows = '';
 
+    grid.innerHTML = '';
+    let rows = '';
     MONTHS.forEach((m, i) => {
-        const atenMes = atencionData.filter(r => getMes(r.fecha) === m);
-        const count = atenMes.length;
+        const pensCount = pensionadosData.filter(r => r.mes === m).length;
         const card = document.createElement('div');
         card.className = 'month-card';
-        card.innerHTML = `<div class="month-name">${m.slice(0, 3)}</div><div class="month-count">${count}</div>`;
+        card.innerHTML = `<div class="month-name">${m.slice(0, 3)}</div><div class="month-count">${pensCount}</div>`;
         grid.appendChild(card);
-
+        const atenMes = atencionData.filter(r => getMes(r.fecha) === m);
+        const count = atenMes.length;
         const countS = k => atenMes.filter(r => r.servicio === k).length;
         const af = countS('AFILIACION'), pr = countS('PRESTACIONES'), rc = countS('RECAUDACION_COBRANZA'),
             ce = countS('ATENCION_CESANTE'), fi = countS('FISCALIZACION'), ot = countS('OTRAS_ATENCIONES');
@@ -675,7 +739,7 @@ function renderReportes() {
     </tr>`;
     });
     tbody.innerHTML = rows;
-
+    // Ejecuta las gráficas que se quedan tal cual
     drawReporteCharts();
 }
 
@@ -751,15 +815,15 @@ function styleWorksheet(worksheet) {
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
     headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1a7a4a' } }; // IVSS Green
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    
+
     // Add Borders and alternating colors
-    worksheet.eachRow({ includeEmpty: false }, function(row, rowNumber) {
-        row.eachCell({ includeEmpty: true }, function(cell, colNumber) {
+    worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+        row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
             cell.border = {
-                top: {style:'thin', color: {argb:'FFE2E8F0'}},
-                left: {style:'thin', color: {argb:'FFE2E8F0'}},
-                bottom: {style:'thin', color: {argb:'FFE2E8F0'}},
-                right: {style:'thin', color: {argb:'FFE2E8F0'}}
+                top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
             };
             if (rowNumber > 1) {
                 cell.alignment = { vertical: 'middle' };
@@ -774,16 +838,22 @@ function styleWorksheet(worksheet) {
 async function exportAtencionExcel() {
     const dDesde = document.getElementById('export-desde').value;
     const dHasta = document.getElementById('export-hasta').value;
-    
+
     let list = atencionData;
     if (dDesde) list = list.filter(r => r.fecha >= dDesde);
     if (dHasta) list = list.filter(r => r.fecha <= dHasta);
-    
+
     if (list.length === 0) {
         toast('No hay datos en este rango de fechas', 'error');
         return;
     }
-    
+
+    list.sort((a, b) => {
+        const fA = a.fecha || '';
+        const fB = b.fecha || '';
+        return fA.localeCompare(fB);
+    });
+
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Atención");
 
@@ -810,65 +880,72 @@ async function exportAtencionExcel() {
     styleWorksheet(worksheet);
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `Reporte_Atencion_${dDesde||'Inicio'}_al_${dHasta||'Fin'}.xlsx`);
+    saveAs(new Blob([buffer]), `Reporte_Atencion_${dDesde || 'Inicio'}_al_${dHasta || 'Fin'}.xlsx`);
 }
 
 async function exportPensionadosExcel() {
     const dDesde = document.getElementById('export-desde').value;
     const dHasta = document.getElementById('export-hasta').value;
-    
+
     let list = pensionadosData;
     if (dDesde || dHasta) {
         list = list.filter(r => {
-            if (!r.fechaRegistro) return true;
-            if (dDesde && r.fechaRegistro < dDesde) return false;
-            if (dHasta && r.fechaRegistro > dHasta) return false;
+            const f = r.fecha || r.fechaRegistro; // Toma la fecha nueva, o la vieja como respaldo
+            if (!f) return true;
+            if (dDesde && f < dDesde) return false;
+            if (dHasta && f > dHasta) return false;
             return true;
         });
     }
-    
+
+    list.sort((a, b) => {
+        const fA = a.fecha || a.fechaRegistro || '';
+        const fB = b.fecha || b.fechaRegistro || '';
+        return fA.localeCompare(fB);
+    });
+
     if (list.length === 0) {
         toast('No hay datos en este rango de fechas', 'error');
         return;
     }
-    
+
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Pensionados");
 
     const headers = [
-        {h: 'N°', k: 'n', w: 6},
-        {h: 'Fecha Registro', k: 'fechaRegistro', w: 18},
-        {h: 'Oficina', k: 'oficina', w: 20},
-        {h: 'Nombres y Apellidos', k: 'nombre', w: 45},
-        {h: 'Cédula', k: 'cedula', w: 15},
-        {h: 'Edad', k: 'edad', w: 10},
-        {h: 'Fecha Nacimiento', k: 'fechaNac', w: 18},
-        {h: 'Género', k: 'genero', w: 12},
-        {h: 'Teléfono', k: 'telefono', w: 20},
-        {h: 'Mes', k: 'mes', w: 15},
-        {h: 'Analista', k: 'analista', w: 25},
-        {h: 'Estado', k: 'estado', w: 15},
-        {h: 'Municipio', k: 'municipio', w: 20},
-        {h: 'Parroquia', k: 'parroquia', w: 25},
-        {h: 'Dirección', k: 'direccion', w: 50},
-        {h: 'Inscrito CNE', k: 'cne', w: 15},
-        {h: 'Centro Votación', k: 'centroVotacion', w: 40},
-        {h: 'Pensionado IVSS', k: 'esIvss', w: 20},
-        {h: 'Tipo de Pensión', k: 'tipoPension', w: 25},
-        {h: 'Banco', k: 'banco', w: 30},
-        {h: 'Recibe Alimentos', k: 'alimentos', w: 18},
-        {h: 'Atención INASS', k: 'inass', w: 18},
-        {h: 'Consejo Comunal', k: 'consejo', w: 35},
-        {h: 'Posee Patología', k: 'tienePatol', w: 18},
-        {h: 'Tipo Patología', k: 'tipoPatologia', w: 40},
-        {h: 'Tratamiento', k: 'tratamiento', w: 40},
-        {h: 'Solicita Meds', k: 'tieneMeds', w: 15},
-        {h: 'Tipo Meds', k: 'tipoMeds', w: 40},
-        {h: 'Pertenece Club', k: 'club', w: 40},
-        {h: 'VenApp', k: 'venapp', w: 12},
-        {h: 'N° Solicitud', k: 'numSolicitud', w: 20},
-        {h: 'Solicitud Especial', k: 'solicEsp', w: 20},
-        {h: 'Tipo Solicitud', k: 'tipoSolicitud', w: 30}
+        { h: 'N°', k: 'n', w: 6 },
+        { h: 'Oficina', k: 'oficina', w: 20 },
+        { h: 'Nombres y Apellidos', k: 'nombre', w: 45 },
+        { h: 'Cédula', k: 'cedula', w: 15 },
+        { h: 'Edad', k: 'edad', w: 10 },
+        { h: 'Fecha Nacimiento', k: 'fechaNac', w: 18 },
+        { h: 'Género', k: 'genero', w: 12 },
+        { h: 'Teléfono', k: 'telefono', w: 20 },
+        { h: 'Mes', k: 'mes', w: 15 },
+        { h: 'Analista', k: 'analista', w: 25 },
+        { h: 'Estado', k: 'estado', w: 15 },
+        { h: 'Municipio', k: 'municipio', w: 20 },
+        { h: 'Parroquia', k: 'parroquia', w: 25 },
+        { h: 'Dirección', k: 'direccion', w: 50 },
+        { h: 'Inscrito CNE', k: 'cne', w: 15 },
+        { h: 'Centro Votación', k: 'centroVotacion', w: 40 },
+        { h: 'Pensionado IVSS', k: 'esIvss', w: 20 },
+        { h: 'Tipo de Pensión', k: 'tipoPension', w: 25 },
+        { h: 'Banco', k: 'banco', w: 30 },
+        { h: 'Recibe Alimentos', k: 'alimentos', w: 18 },
+        { h: 'Atención INASS', k: 'inass', w: 18 },
+        { h: 'Consejo Comunal', k: 'consejo', w: 35 },
+        { h: 'Posee Patología', k: 'tienePatol', w: 18 },
+        { h: 'Tipo Patología', k: 'tipoPatologia', w: 40 },
+        { h: 'Tratamiento', k: 'tratamiento', w: 40 },
+        { h: 'Solicita Meds', k: 'tieneMeds', w: 15 },
+        { h: 'Tipo Meds', k: 'tipoMeds', w: 40 },
+        { h: 'Pertenece Club', k: 'club', w: 40 },
+        { h: 'VenApp', k: 'venapp', w: 12 },
+        { h: 'N° Solicitud', k: 'numSolicitud', w: 20 },
+        { h: 'Solicitud Especial', k: 'solicEsp', w: 20 },
+        { h: 'Tipo Solicitud', k: 'tipoSolicitud', w: 30 },
+        { h: 'Fecha', k: 'fecha', w: 18 }
     ];
 
     worksheet.columns = headers.map(x => ({ header: x.h, key: x.k, width: x.w }));
@@ -877,8 +954,12 @@ async function exportPensionadosExcel() {
         const rowData = {};
         headers.forEach(x => {
             if (x.k === 'n') rowData[x.k] = i + 1;
-            else if (x.k === 'fechaRegistro' && !r.fechaRegistro) rowData[x.k] = 'Registro Antiguo';
-            else rowData[x.k] = r[x.k] || '-';
+            else if (x.k === 'fecha') {
+                rowData[x.k] = r.fecha || r.fechaRegistro || new Date().toLocaleDateString('sv-SE');
+            }
+            else {
+                rowData[x.k] = r[x.k] || '-';
+            }
         });
         worksheet.addRow(rowData);
     });
@@ -886,5 +967,168 @@ async function exportPensionadosExcel() {
     styleWorksheet(worksheet);
 
     const buffer = await workbook.xlsx.writeBuffer();
-    saveAs(new Blob([buffer]), `Reporte_Pensionados_${dDesde||'Inicio'}_al_${dHasta||'Fin'}.xlsx`);
+    saveAs(new Blob([buffer]), `Reporte_Pensionados_${dDesde || 'Inicio'}_al_${dHasta || 'Fin'}.xlsx`);
+}
+
+// FUNCIONES DE CONTROL DEL PERFIL DE ADMINISTRADOR
+function openPerfilModal() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const username = user.email.split('@')[0];
+    document.getElementById('perfil-user').value = username;
+    document.getElementById('perfil-pass').value = '';
+    document.getElementById('perfil-pass-confirm').value = '';
+    
+    // Rellenar avatar
+    const inicial = username.charAt(0).toUpperCase();
+    document.getElementById('perfil-avatar-text').textContent = inicial;
+    // Resetear segmentos de seguridad
+    const segments = ['strength-seg-1', 'strength-seg-2', 'strength-seg-3', 'strength-seg-4'];
+    segments.forEach(id => {
+        const seg = document.getElementById(id);
+        if (seg) seg.style.backgroundColor = '#e2e8f0';
+    });
+    
+    const txt = document.getElementById('pass-strength-text');
+    if (txt) {
+        txt.textContent = 'Vacía';
+        txt.style.color = '#94a3b8';
+    }
+    document.getElementById('modal-perfil').classList.remove('hidden');
+}
+function closePerfilModal() {
+    document.getElementById('modal-perfil').classList.add('hidden');
+}
+// Guarda los cambios validados y llama a Firebase
+async function savePerfilCredentials() {
+    const nuevoUser = document.getElementById('perfil-user').value.trim();
+    const nuevaPass = document.getElementById('perfil-pass').value;
+    const passConfirm = document.getElementById('perfil-pass-confirm').value;
+    const saveBtn = document.getElementById('perfil-save-btn');
+    if (!nuevoUser) {
+        toast('El campo Usuario no puede estar vacío.', 'error');
+        return;
+    }
+    // Validar límites de caracteres
+    if (nuevaPass) {
+        if (nuevaPass.length < 7 || nuevaPass.length > 15) {
+            toast('La contraseña debe tener entre 7 y 15 caracteres.', 'error');
+            return;
+        }
+        if (nuevaPass !== passConfirm) {
+            toast('Las contraseñas no coinciden.', 'error');
+            return;
+        }
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Guardando...';
+    try {
+        await fsUpdateAdminProfile(nuevoUser, nuevaPass);
+        toast('Perfil actualizado con éxito.', 'success');
+        closePerfilModal();
+        
+        // Actualizar el chip de la barra superior
+        const displayName = nuevoUser.charAt(0).toUpperCase() + nuevoUser.slice(1);
+        document.getElementById('user-display-name').textContent = displayName;
+        document.getElementById('user-avatar').textContent = nuevoUser.charAt(0).toUpperCase();
+    } catch (error) {
+        console.error(error);
+        if (error.code === 'auth/requires-recent-login') {
+            toast('Por seguridad, debes cerrar sesión y volver a ingresar para hacer este cambio.', 'warning');
+        } else {
+            toast('Error al actualizar el perfil: ' + error.message, 'error');
+        }
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar Cambios';
+    }
+}
+// Inicializar clics, medidor por segmentos e interacciones
+function inicializarEventosPerfil() {
+    const topbarUser = document.getElementById('topbar-user');
+    if (topbarUser) {
+        topbarUser.style.cursor = 'pointer';
+        topbarUser.onclick = openPerfilModal; 
+    }
+    const perfilToggleBtn = document.getElementById('perfil-toggle-pass');
+    if (perfilToggleBtn) {
+        perfilToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const passInput = document.getElementById('perfil-pass');
+            const eyeOpen = document.getElementById('perfil-eye-open');
+            const eyeClosed = document.getElementById('perfil-eye-closed');
+            
+            if (passInput && eyeOpen && eyeClosed) {
+                if (passInput.type === 'password') {
+                    passInput.type = 'text';
+                    eyeOpen.style.display = 'none';
+                    eyeClosed.style.display = 'block';
+                } else {
+                    passInput.type = 'password';
+                    eyeOpen.style.display = 'block';
+                    eyeClosed.style.display = 'none';
+                }
+            }
+        });
+    }
+    // Medidor dinámico de seguridad por segmentos de color
+    const perfilPass = document.getElementById('perfil-pass');
+    if (perfilPass) {
+        perfilPass.addEventListener('input', function() {
+            const val = this.value;
+            const seg1 = document.getElementById('strength-seg-1');
+            const seg2 = document.getElementById('strength-seg-2');
+            const seg3 = document.getElementById('strength-seg-3');
+            const seg4 = document.getElementById('strength-seg-4');
+            const txt = document.getElementById('pass-strength-text');
+            
+            if (!seg1 || !seg2 || !seg3 || !seg4 || !txt) return;
+            // Resetear todos a color base gris
+            [seg1, seg2, seg3, seg4].forEach(seg => seg.style.backgroundColor = '#e2e8f0');
+            if (!val) {
+                txt.textContent = 'Vacía';
+                txt.style.color = '#94a3b8';
+                return;
+            }
+            
+            if (val.length < 7) {
+                seg1.style.backgroundColor = '#ef4444'; // Solo se enciende el primero en rojo
+                txt.textContent = 'Corta (Mínimo 7)';
+                txt.style.color = '#ef4444';
+                return;
+            }
+            
+            // Evaluar los factores
+            let score = 0;
+            if (/[0-9]/.test(val)) score++;             // números
+            if (/[A-Z]/.test(val)) score++;             // mayúsculas
+            if (/[a-z]/.test(val)) score++;             // minúsculas
+            if (/[^A-Za-z0-9]/.test(val)) score++;       // caracteres especiales
+            if (score <= 1) {
+                // Naranja (Débil)
+                seg1.style.backgroundColor = '#f97316';
+                seg2.style.backgroundColor = '#f97316';
+                txt.textContent = 'Débil';
+                txt.style.color = '#f97316';
+            } else if (score === 2 || score === 3) {
+                // Amarillo (Media)
+                seg1.style.backgroundColor = '#eab308';
+                seg2.style.backgroundColor = '#eab308';
+                seg3.style.backgroundColor = '#eab308';
+                txt.textContent = 'Media';
+                txt.style.color = '#eab308';
+            } else {
+                // Verde (Segura)
+                [seg1, seg2, seg3, seg4].forEach(seg => seg.style.backgroundColor = '#22c55e');
+                txt.textContent = 'Segura';
+                txt.style.color = '#22c55e';
+            }
+        });
+    }
+}
+// Inicialización segura del perfil
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarEventosPerfil);
+} else {
+    inicializarEventosPerfil();
 }
