@@ -397,7 +397,14 @@ function getFilteredPens() {
         if (fB !== fA) {
             return fB.localeCompare(fA); // Más reciente primero
         }
-        return (a.nombre || '').localeCompare(b.nombre || ''); // Orden alfabético si tienen la misma fecha
+         const tA = a.timestamp || 0;
+        const tB = b.timestamp || 0;
+        if (tB !== tA) {
+            return tB - tA; // Coloca el más reciente arriba
+        }
+        
+        // 3. Fallback: Orden alfabético si no tienen marca de tiempo
+        return (a.nombre || '').localeCompare(b.nombre || '');
     });
 }
 
@@ -416,7 +423,7 @@ function renderPensTable() {
         <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted)">${(pensPage - 1) * PAGE_SIZE + i + 1}</td>
         <td>${fmt_date(r.fecha || r.fechaRegistro || new Date().toLocaleDateString('sv-SE'))}</td> 
        <td title="${r.nombre}">
-                    <div style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <div style="max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         <strong>${r.nombre}</strong>
                     </div>
                 </td>

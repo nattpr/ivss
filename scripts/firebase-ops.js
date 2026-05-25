@@ -211,11 +211,14 @@ async function fsSyncCiudadano(cedula, dataToSync) {
     const batch = db.batch();
     let hasUpdates = false;
 
-    // Filter fields that are actually defined
-    const cleanData = {};
-    for (const key in dataToSync) {
-        if (dataToSync[key] !== undefined) cleanData[key] = dataToSync[key];
-    }
+     const cleanData = {};
+    const allowedKeys = ['nombre', 'fechaNac', 'edad', 'genero', 'telefono'];
+    
+    allowedKeys.forEach(key => {
+        if (dataToSync[key] !== undefined && dataToSync[key] !== null) {
+            cleanData[key] = dataToSync[key];
+        }
+    });
     if (Object.keys(cleanData).length === 0) return;
 
     const needsUpdate = (record, newData) => {
