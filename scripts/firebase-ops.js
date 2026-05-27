@@ -77,7 +77,6 @@ function inicializarEventosLogin() {
             const passInput = document.getElementById('login-pass');
             const eyeOpen = document.getElementById('eye-open');
             const eyeClosed = document.getElementById('eye-closed');
-
             if (passInput && eyeOpen && eyeClosed) {
                 if (passInput.type === 'password') {
                     passInput.type = 'text';
@@ -91,40 +90,6 @@ function inicializarEventosLogin() {
             }
         });
     }
-
-    const forgotBtn = document.getElementById('login-forgot-btn');
-    if (forgotBtn) {
-        forgotBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('login-form-fields').style.display = 'none';
-            document.getElementById('recovery-form-fields').style.display = 'block';
-
-            // Limpiar errores anteriores y restaurar color del recuadro
-            const err = document.getElementById('login-error');
-            if (err) {
-                err.classList.add('hidden');
-                err.style.backgroundColor = '';
-                err.style.color = '';
-                err.style.border = '';
-            }
-        });
-    }
-
-    const backBtn = document.getElementById('login-back-btn');
-    if (backBtn) {
-        backBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('recovery-form-fields').style.display = 'none';
-            document.getElementById('login-form-fields').style.display = 'block';
-            const err = document.getElementById('login-error');
-            if (err) {
-                err.classList.add('hidden');
-                err.style.backgroundColor = '';
-                err.style.color = '';
-                err.style.border = '';
-            }
-        });
-    }
 }
 // Inicialización segura del DOM
 if (document.readyState === 'loading') {
@@ -132,12 +97,9 @@ if (document.readyState === 'loading') {
 } else {
     inicializarEventosLogin();
 }
-
-
 async function handleLogout() {
     await auth.signOut();
 }
-
 // ── FIRESTORE LOAD ────────────────────────────────────
 async function loadAllData() {
     const [aSnap, pSnap] = await Promise.all([
@@ -274,10 +236,10 @@ auth.onAuthStateChanged(async (user) => {
         setLoginLoading(false);
 
         // Show user chip in topbar
-        const name = user.email.split('@')[0];
-        const display = name.charAt(0).toUpperCase() + name.slice(1);
-        document.getElementById('user-display-name').textContent = "Usuario";
-        document.getElementById('user-avatar').textContent = "U";
+         const activeName = user.displayName || user.email.split('@')[0];
+        const display = activeName.charAt(0).toUpperCase() + activeName.slice(1);
+        document.getElementById('user-display-name').textContent = display;
+        document.getElementById('user-avatar').textContent = activeName.charAt(0).toUpperCase();
         updateDate();
         navigate('dashboard');
     } else {

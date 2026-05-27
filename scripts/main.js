@@ -90,8 +90,23 @@ function navigate(view) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const idx = { dashboard: 0, atencion: 1, pensionados: 2, reportes: 3 };
     document.querySelectorAll('.nav-item')[idx[view]]?.classList.add('active');
+    
     const titles = { dashboard: 'Panel de Control', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas' };
-    document.getElementById('topbar-title').textContent = titles[view];
+    const icons = { dashboard: 'layout-dashboard', atencion: 'user-check', pensionados: 'award', reportes: 'bar-chart-3' };
+    const colors = { dashboard: 'header-blue', atencion: 'header-green', pensionados: 'header-gold', reportes: 'header-purple' };
+    const topbarTitle = document.getElementById('topbar-title');
+    if (topbarTitle) {
+        topbarTitle.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px; height: 100%;">
+                <div class="header-icon-circle-small ${colors[view]}">
+                    <i data-lucide="${icons[view]}" class="icon-nav-header-small"></i>
+                </div>
+                <span style="font-weight: 800; color: #0d2468; font-size: 18px; font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;">${titles[view]}</span>
+            </div>
+        `;
+        lucide.createIcons();
+    }
+    
     renderView(view);
 }
 
@@ -187,16 +202,33 @@ function drawDashCharts() {
     });
 
     // Pension type
-    const ptypes = {};
+     const ptypes = {};
     pensionadosData.forEach(r => { const k = r.tipoPension || 'Sin datos'; ptypes[k] = (ptypes[k] || 0) + 1; });
     const ptLabels = Object.keys(ptypes), ptVals = Object.values(ptypes);
+    
     new Chart(document.getElementById('chart-pension'), {
         type: 'bar',
         data: {
             labels: ptLabels,
             datasets: [{ label: 'Pensionados', data: ptVals, backgroundColor: GOLD, borderRadius: 6 }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f8' } }, x: { grid: { display: false }, ticks: { maxRotation: 30 } } } }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { display: false } 
+            }, 
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: '#eef2f8' } 
+                }, 
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { maxRotation: 30 } 
+                } 
+            } 
+        }
     });
 }
 
@@ -766,15 +798,20 @@ function viewPensionado(id) {
 function renderReportes() {
     const grid = document.getElementById('rep-month-grid');
     const tbody = document.getElementById('rep-tbody');
-
     grid.innerHTML = '';
     let rows = '';
     MONTHS.forEach((m, i) => {
         const pensCount = pensionadosData.filter(r => r.mes === m).length;
         const card = document.createElement('div');
         card.className = 'month-card';
+        
+        // Hacemos que tenga estilo de botón clicable y ejecute el modal
+        card.style.cursor = 'pointer';
+        card.onclick = () => abrirModalReporteMensual(new Date().getFullYear(), i);
+        
         card.innerHTML = `<div class="month-name">${m.slice(0, 3)}</div><div class="month-count">${pensCount}</div>`;
         grid.appendChild(card);
+        
         const atenMes = atencionData.filter(r => getMes(r.fecha) === m);
         const count = atenMes.length;
         const countS = k => atenMes.filter(r => r.servicio === k).length;
@@ -790,6 +827,111 @@ function renderReportes() {
     tbody.innerHTML = rows;
     // Ejecuta las gráficas que se quedan tal cual
     drawReporteCharts();
+}
+
+let reporteAnioActivo = new Date().getFullYear();
+let reporteMesActivo = 0; // 0 = Enero, 11 = Diciembre
+// Abre el modal y dibuja los días según el mes clickeado
+function abrirModalReporteMensual(anio, mesIndex) {
+  reporteAnioActivo = parseInt(anio);
+  reporteMesActivo = parseInt(mesIndex);
+  const nombreMes = MONTHS[reporteMesActivo];
+  
+  // Cambiar títulos dinámicamente usando las variables del sistema
+  document.getElementById("modal-reporte-titulo").innerText = `Resumen de Pensionados - ${nombreMes} ${reporteAnioActivo}`;
+  document.getElementById("detalles-dia-titulo").innerText = "Pensionados Atendidos: Seleccione un día";
+  
+  // Tabla con mensaje inicial
+  document.getElementById("tabla-cuerpo-pensionados-dia").innerHTML = `
+    <tr>
+      <td colspan="3" class="text-center-modal">Seleccione un día de la izquierda para cargar la información.</td>
+    </tr>
+  `;
+  
+  const gridDias = document.getElementById("grid-dias-reporte");
+  gridDias.innerHTML = "";
+  
+  // Obtener el total de días que tiene el mes (28, 30 o 31)
+  const totalDias = new Date(reporteAnioActivo, reporteMesActivo + 1, 0).getDate();
+  
+  // Pintar los botones de los días en la cuadrícula
+  for (let dia = 1; dia <= totalDias; dia++) {
+    const botonDia = document.createElement("button");
+    botonDia.className = "dia-btn";
+    botonDia.innerText = dia;
+    botonDia.onclick = function() {
+      // Quitar estilo activo de los otros días y ponerlo en este
+      document.querySelectorAll(".dia-btn").forEach(btn => btn.classList.remove("dia-activo"));
+      botonDia.classList.add("dia-activo");
+      // Cargar los registros en la tabla
+      cargarPensionadosPorDia(dia);
+    };
+    gridDias.appendChild(botonDia);
+  }
+  
+  // Mostrar el modal
+  document.getElementById("modal-reporte-mensual").style.display = "flex";
+}
+// Cierra el modal
+function cerrarModalReporteMensual() {
+  document.getElementById("modal-reporte-mensual").style.display = "none";
+}
+// Helper para extraer el número de día de un string de fecha (soporta YYYY-MM-DD y DD/MM/YYYY)
+function getDiaDeFecha(fechaStr) {
+  if (!fechaStr) return null;
+  if (fechaStr.includes('-')) {
+    const partes = fechaStr.split('-');
+    return partes[0].length === 4 ? parseInt(partes[2]) : parseInt(partes[0]);
+  }
+  if (fechaStr.includes('/')) {
+    const partes = fechaStr.split('/');
+    return partes[0].length === 4 ? parseInt(partes[2]) : parseInt(partes[0]);
+  }
+  return null;
+}
+// Filtra localmente el array `pensionadosData` por mes y día
+function cargarPensionadosPorDia(dia) {
+  const tablaCuerpo = document.getElementById("tabla-cuerpo-pensionados-dia");
+  const nombreMes = MONTHS[reporteMesActivo];
+  
+  const diaFmt = dia.toString().padStart(2, '0');
+  const mesFmt = (reporteMesActivo + 1).toString().padStart(2, '0');
+  const fechaCompleta = `${diaFmt}/${mesFmt}/${reporteAnioActivo}`;
+  
+  document.getElementById("detalles-dia-titulo").innerText = `Pensionados Atendidos: ${fechaCompleta}`;
+  
+  // Filtramos la data en memoria
+  const filtrados = pensionadosData.filter(r => {
+    const coincideMes = r.mes === nombreMes;
+    const diaRegistro = getDiaDeFecha(r.fecha || r.fechaRegistro);
+    return coincideMes && diaRegistro === dia;
+  });
+  
+  tablaCuerpo.innerHTML = "";
+  
+  if (filtrados.length === 0) {
+    tablaCuerpo.innerHTML = `
+      <tr>
+        <td colspan="3" class="text-center-modal">No se registraron pensionados atendidos este día.</td>
+      </tr>
+    `;
+    return;
+  }
+  
+  // Renderizamos las filas de los pensionados atendidos ese día
+  filtrados.forEach(r => {
+    const fila = document.createElement("tr");
+    const cedula = r.cedula || r.id || "-";
+    const nombre = r.nombre || `${r.nombres || ""} ${r.apellidos || ""}`;
+    const tipoPension = r.tipoPension || r.tipoSolicitud || "Pensión";
+    
+    fila.innerHTML = `
+      <td><strong>${cedula}</strong></td>
+      <td>${nombre}</td>
+      <td><span class="badge" style="background: var(--primary-light, #eff6ff); color: var(--primary-color, #2563eb); padding: 3px 10px; border-radius: 9999px; font-size: 11px; font-weight: 600; display: inline-block;">${tipoPension}</span></td>
+    `;
+    tablaCuerpo.appendChild(fila);
+  });
 }
 
 function drawReporteCharts() {
@@ -1029,14 +1171,16 @@ async function exportPensionadosExcel() {
 function openPerfilModal() {
     const user = auth.currentUser;
     if (!user) return;
-    const username = user.email.split('@')[0];
+    // Leemos el displayName guardado, o el correo como respaldo
+    const username = user.displayName || user.email.split('@')[0];
     document.getElementById('perfil-user').value = username;
     document.getElementById('perfil-pass').value = '';
     document.getElementById('perfil-pass-confirm').value = '';
     
-    // Rellenar avatar
+    // Rellenar avatar con la inicial del alias actual
     const inicial = username.charAt(0).toUpperCase();
     document.getElementById('perfil-avatar-text').textContent = inicial;
+
     // Resetear segmentos de seguridad
     const segments = ['strength-seg-1', 'strength-seg-2', 'strength-seg-3', 'strength-seg-4'];
     segments.forEach(id => {
@@ -1054,44 +1198,74 @@ function openPerfilModal() {
 function closePerfilModal() {
     document.getElementById('modal-perfil').classList.add('hidden');
 }
-// Guarda los cambios validados y llama a Firebase
+// Guarda los cambios validados y llama a Firebase con reautenticación
 async function savePerfilCredentials() {
-    const nuevoUser = document.getElementById('perfil-user').value.trim();
+    const nuevoNombreAlias = document.getElementById('perfil-user').value.trim();
+    const passOld = document.getElementById('perfil-pass-old').value; // <-- NUEVA LÍNEA: Captura contraseña antigua
     const nuevaPass = document.getElementById('perfil-pass').value;
     const passConfirm = document.getElementById('perfil-pass-confirm').value;
     const saveBtn = document.getElementById('perfil-save-btn');
-    if (!nuevoUser) {
+    if (!nuevoNombreAlias) {
         toast('El campo Usuario no puede estar vacío.', 'error');
         return;
     }
-    // Validar límites de caracteres
-    if (nuevaPass) {
-        if (nuevaPass.length < 7 || nuevaPass.length > 15) {
-            toast('La contraseña debe tener entre 7 y 15 caracteres.', 'error');
-            return;
-        }
-        if (nuevaPass !== passConfirm) {
-            toast('Las contraseñas no coinciden.', 'error');
-            return;
-        }
+    // Si el usuario intentó escribir una contraseña nueva, la antigua es obligatoria
+    if (nuevaPass && !passOld) {
+        toast('Por favor, ingresa tu contraseña actual para autorizar el cambio.', 'error');
+        return;
+    }
+    if (nuevaPass && (nuevaPass.length < 7 || nuevaPass.length > 15)) {
+        toast('La contraseña debe tener entre 7 y 15 caracteres.', 'error');
+        return;
+    }
+    if (nuevaPass && nuevaPass !== passConfirm) {
+        toast('Las contraseñas no coinciden.', 'error');
+        return;
     }
     saveBtn.disabled = true;
     saveBtn.textContent = 'Guardando...';
     try {
-        await fsUpdateAdminProfile(nuevoUser, nuevaPass);
+        const user = auth.currentUser;
+        // 1. SI EL USUARIO ESCRIBIÓ UNA NUEVA CONTRASEÑA, REAUTENTICAMOS PRIMERO
+        if (nuevaPass) {
+            // Genera la credencial con el email actual y la contraseña vieja ingresada
+            const credential = firebase.auth.EmailAuthProvider.credential(user.email, passOld);
+            
+            // Reautentica al usuario en Firebase Auth
+            await user.reauthenticateWithCredential(credential);
+            
+            // Si la autenticación es exitosa, actualiza a la nueva clave
+            await user.updatePassword(nuevaPass);
+        }
+        // 2. ACTUALIZAMOS EL PERFIL NATIVO DE FIREBASE AUTH (Alias)
+        await user.updateProfile({
+            displayName: nuevoNombreAlias
+        });
+        // 3. GUARDAMOS EL NOMBRE EN FIRESTORE COMO RESPALDO
+        await db.collection('perfiles').doc(user.uid).set({
+            nombre_alias: nuevoNombreAlias
+        }, { merge: true });
         toast('Perfil actualizado con éxito.', 'success');
-        closePerfilModal();
         
-        // Actualizar el chip de la barra superior
-        const displayName = nuevoUser.charAt(0).toUpperCase() + nuevoUser.slice(1);
-        document.getElementById('user-display-name').textContent = displayName;
-        document.getElementById('user-avatar').textContent = nuevoUser.charAt(0).toUpperCase();
+        // 4. ACTUALIZAMOS LA BARRA SUPERIOR INMEDIATAMENTE
+        const displayNameFormateado = nuevoNombreAlias.charAt(0).toUpperCase() + nuevoNombreAlias.slice(1);
+        document.getElementById('user-display-name').textContent = displayNameFormateado;
+        document.getElementById('user-avatar').textContent = nuevoNombreAlias.charAt(0).toUpperCase();
+        
+        // Limpiamos los campos de contraseñas de la pantalla
+        document.getElementById('perfil-pass-old').value = "";
+        document.getElementById('perfil-pass').value = "";
+        document.getElementById('perfil-pass-confirm').value = "";
+        closePerfilModal();
     } catch (error) {
         console.error(error);
-        if (error.code === 'auth/requires-recent-login') {
-            toast('Por seguridad, debes cerrar sesión y volver a ingresar para hacer este cambio.', 'warning');
+        // Manejamos si la contraseña antigua es incorrecta
+        if (error.code === 'auth/wrong-password') {
+            toast('La contraseña antigua es incorrecta.', 'error');
+        } else if (error.code === 'auth/requires-recent-login') {
+            toast('Por seguridad, cierra sesión y vuelve a entrar para cambiar la contraseña.', 'warning');
         } else {
-            toast('Error al actualizar el perfil: ' + error.message, 'error');
+            toast('Error: ' + error.message, 'error');
         }
     } finally {
         saveBtn.disabled = false;

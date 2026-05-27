@@ -6,9 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IVSS · OA Cabimas — Sistema de Atención</title>
     <link rel="stylesheet" href="./css/style.css">
+    
+    <!-- Fuentes de Google Fonts (Barlow, IBM Plex Mono, y las nuevas Outfit e Inter) -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
         rel="stylesheet">
+    
+    <!-- Script para los nuevos iconos interactivos de Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <!-- Firebase SDK (compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -18,7 +23,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 </head>
-
 <body>
 
     <!-- login -->
@@ -74,14 +78,6 @@
                         </button>
                     </div>
                 </div>
-                <!-- Enlace de ¿Olvidaste la contraseña? -->
-                <div
-                    style="display: flex; justify-content: flex-end; align-items: center; margin: -5px 0 12px 0; font-size: 13px;">
-                    <a href="#" id="login-forgot-btn"
-                        style="color: var(--gold); text-decoration: none; font-weight: 500;">¿Olvidaste la
-                        contraseña?</a>
-                </div>
-                <!-- Recordar contraseña -->
                 <div style="margin-bottom: 20px; font-size: 13px;">
                     <label
                         style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-muted);">
@@ -92,30 +88,10 @@
                     Ingresar al Sistema
                 </button>
             </div>
-            <div id="recovery-form-fields" style="display: none;">
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px; line-height: 1.5;">
-                    Ingresa tu correo electrónico registrado y te enviaremos un enlace para restablecer tu contraseña.
-                </p>
-                <div class="login-field">
-                    <label for="recovery-email">Correo Electrónico *</label>
-                    <input type="email" id="recovery-email" placeholder="correo@ejemplo.com"
-                        onkeydown="if(event.key==='Enter')handlePasswordRecovery()">
-                </div>
-                <button id="recovery-btn" class="login-btn" onclick="handlePasswordRecovery()"
-                    style="margin-bottom: 15px;">
-                    Enviar Enlace de Recuperación
-                </button>
-                <div style="text-align: center; font-size: 13px; margin-top: 10px;">
-                    <a href="#" id="login-back-btn"
-                        style="color: var(--gold); text-decoration: none; font-weight: 500;">Volver al Inicio de
-                        Sesión</a>
-                </div>
-            </div> <!-- Cierra recovery-form-fields -->
             <!-- Footer interno -->
             <div class="login-footer">IVSS &middot; Cabimas, Zulia &middot; 2026</div>
         </div>
     </div>
-
     <!-- sidebar -->
     <nav class="sidebar">
         <div class="sidebar-brand">
@@ -135,43 +111,26 @@
         <div class="sidebar-nav">
             <div class="nav-section-label">Principal</div>
             <div class="nav-item active" onclick="navigate('dashboard')">
-                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect x="3" y="12" width="4" height="9" />
-                        <rect x="10" y="6" width="4" height="15" />
-                        <rect x="17" y="2" width="4" height="19" />
-                    </svg></span> Panel de Control
+                <i data-lucide="layout-dashboard" class="nav-icon"></i> Panel de Control
             </div>
+            
             <div class="nav-section-label">Módulos</div>
+            
+            <!-- ATENCIÓN AL PÚBLICO -->
             <div class="nav-item" onclick="navigate('atencion')">
-                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
-                        <line x1="9" y1="12" x2="15" y2="12" />
-                        <line x1="9" y1="16" x2="13" y2="16" />
-                    </svg></span> Atención al Público
+                <i data-lucide="user-check" class="nav-icon"></i> Atención al Público
             </div>
+            
+            <!-- CENSO DE PENSIONADOS -->
             <div class="nav-item" onclick="navigate('pensionados')">
-                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg></span> Censo de Pensionados
+                <i data-lucide="award" class="nav-icon"></i> Censo de Pensionados
             </div>
+            
             <div class="nav-section-label">Análisis</div>
+            
+            <!-- REPORTES Y ESTADÍSTICAS -->
             <div class="nav-item" onclick="navigate('reportes')">
-                <span class="nav-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                        <polyline points="17 6 23 6 23 12" />
-                    </svg></span> Reportes y Estadísticas
+                <i data-lucide="bar-chart-3" class="nav-icon"></i> Reportes y Estadísticas
             </div>
         </div>
         <div class="sidebar-footer">
@@ -182,13 +141,16 @@
     <!-- MAIN -->
     <div class="main">
         <div class="topbar">
-            <div class="topbar-title" id="topbar-title">Dashboard</div>
+            <div class="topbar-title" id="topbar-title">Panel de Control</div>
             <div class="topbar-right">
                 <div class="topbar-date" id="topbar-date"></div>
-                <div class="topbar-user" id="topbar-user" style="display:none">
+                
+                <!-- Cambiado de <div> a <button> para que abra tu perfil al hacerle clic -->
+                <button class="topbar-user" id="topbar-user" style="display:none; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 0; font-family: inherit; outline: none;" onclick="openPerfilModal()">
                     <div class="user-avatar" id="user-avatar">A</div>
-                    <span id="user-display-name">Admin</span>
-                </div>
+                    <span id="user-display-name" style="font-weight: 600; color: #1e293b;">Admin</span>
+                </button>
+                
                 <button class="btn-logout" id="btn-logout" style="display:none" onclick="handleLogout()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -897,7 +859,7 @@
     <script src="./scripts/main.js"></script>
 </body>
 
-<!-- MODAL DE MI PERFIL REDISEÑADO -->
+<!-- MODAL DE MI PERFIL -->
 <div id="modal-perfil" class="modal-overlay hidden">
     <!-- Estilos encapsulados para no interferir con el CSS global -->
     <style>
@@ -1077,9 +1039,25 @@
                         </svg>
                         <input type="text" id="perfil-user" class="perfil-input" placeholder="admin">
                     </div>
-                    <span style="font-size: 13px; color: #64748b; font-weight: 700;">@ivss.gob.ve</span>
                 </div>
             </div>
+
+            <div class="perfil-field-group">
+                <label class="perfil-label">Contraseña Actual</label>
+                <div class="perfil-input-container">
+                    <!-- Icono de llave -->
+                    <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4c.6-.6.6-1.6 0-2.2L12 10" />
+                        <path d="M19 3a5 5 0 0 0-5 5c0 1.2.4 2.2 1.2 3L19 15l4.3-4.3c.8-.8 1.2-1.8 1.2-3a5 5 0 0 0-5-5Z" />
+                        <circle cx="19" cy="8" r="1" />
+                    </svg>
+                    <input type="password" id="perfil-pass-old" class="perfil-input"
+                        placeholder="Contraseña actual" maxlength="15">
+                </div>
+            </div>
+
             <!-- Input Contraseña Nueva -->
             <div class="perfil-field-group">
                 <label class="perfil-label">Nueva Contraseña</label>
@@ -1154,6 +1132,44 @@
             </div>
         </div>
     </div>
+</div>
+
+<div id="modal-reporte-mensual" class="modal-backdrop" style="display: none;">
+  <div class="modal-content">
+    
+    <!-- Encabezado del Modal -->
+    <div class="modal-header">
+      <h3 id="modal-reporte-titulo">Resumen de Pensionados</h3>
+      <button class="btn-close" onclick="cerrarModalReporteMensual()">&times;</button>
+    </div>
+    
+    <!-- Cuerpo del Modal Dividido en 2 Columnas -->
+    <div class="modal-body-split">
+      <div class="calendario-col">
+        <h4>Seleccione un Día</h4>
+        <div id="grid-dias-reporte" class="grid-dias"></div>
+      </div>
+      <div class="detalles-col">
+        <h4 id="detalles-dia-titulo">Pensionados Atendidos: Seleccione un día</h4>
+        <div class="tabla-contenedor-modal">
+          <table class="tabla-atencion-modal">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Cédula</th>
+                <th style="width: 50%;">Nombres y Apellidos</th>
+                <th style="width: 25%;">Tipo de Pensión</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-cuerpo-pensionados-dia">
+              <tr>
+                <td colspan="3" class="text-center-modal">Seleccione un día de la izquierda para cargar la información.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 </html>
