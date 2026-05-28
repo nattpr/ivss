@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -78,12 +78,6 @@
                         </button>
                     </div>
                 </div>
-                <div style="margin-bottom: 20px; font-size: 13px;">
-                    <label
-                        style="display: flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text-muted);">
-                        <input type="checkbox" id="login-remember-me" style="cursor: pointer;"> Recordar contraseña
-                    </label>
-                </div>
                 <button id="login-btn" class="login-btn" onclick="handleLogin()">
                     Ingresar al Sistema
                 </button>
@@ -131,6 +125,12 @@
             <!-- REPORTES Y ESTADÍSTICAS -->
             <div class="nav-item" onclick="navigate('reportes')">
                 <i data-lucide="bar-chart-3" class="nav-icon"></i> Reportes y Estadísticas
+            </div>
+
+            <!-- GESTIÓN DE USUARIOS (Solo Admin) -->
+            <div class="nav-section-label" id="nav-sec-config" style="display:none;">Configuración</div>
+            <div class="nav-item" id="nav-item-usuarios" style="display:none;" onclick="navigate('usuarios')">
+                <i data-lucide="users" class="nav-icon"></i> Gestión de Usuarios
             </div>
         </div>
         <div class="sidebar-footer">
@@ -420,6 +420,67 @@
             </div>
         </div>
     </template>
+
+    <!-- USUARIOS TEMPLATE (Solo Admin) -->
+    <template id="tpl-usuarios">
+        <div>
+            <div class="section-header">
+                <div>
+                    <div class="section-title">Gestión de Usuarios</div>
+                    <div class="section-sub">Administración de cuentas de Operadores del Sistema</div>
+                </div>
+                <button class="btn btn-primary" onclick="openUsuarioModal()">+ Registrar Operador</button>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Cuentas Registradas</div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Rol</th>
+                                <th>Contraseña</th>
+                                <th>Fecha Registro</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usu-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- MODAL USUARIO -->
+    <div id="modal-usuario" class="modal-overlay hidden">
+        <div class="modal" style="max-width: 440px;">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-usu-title">Registrar Operador</div>
+                <button class="modal-close" onclick="closeUsuarioModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label class="form-label">Nombre de Usuario (ej: operador1)</label>
+                    <input class="form-input" type="text" id="usu-username" placeholder="operador1">
+                </div>
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label class="form-label">Contraseña</label>
+                    <input class="form-input" type="password" id="usu-password" placeholder="Mínimo 6 caracteres" minlength="6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeUsuarioModal()">Cancelar</button>
+                <button class="btn btn-primary" id="btn-save-usuario" onclick="saveUsuario()">Guardar Usuario</button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL ATENCIÓN -->
     <div id="modal-atencion" class="modal-overlay hidden">

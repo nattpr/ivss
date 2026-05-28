@@ -86,14 +86,20 @@ function toast(msg, type = 'success') {
 // ── NAVIGATION 
 let currentView = 'dashboard';
 function navigate(view) {
+    if (view === 'usuarios' && currentUserRole !== 'admin') {
+        toast('Acceso denegado', 'error');
+        return;
+    }
     currentView = view;
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    const idx = { dashboard: 0, atencion: 1, pensionados: 2, reportes: 3 };
-    document.querySelectorAll('.nav-item')[idx[view]]?.classList.add('active');
+    // Encontrar el nav-item correcto puede fallar si usamos índices fijos al añadir nuevos items ocultos, mejor buscamos por onclick
+    document.querySelectorAll('.nav-item').forEach(el => {
+        if (el.getAttribute('onclick') === `navigate('${view}')`) el.classList.add('active');
+    });
     
-    const titles = { dashboard: 'Panel de Control', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas' };
-    const icons = { dashboard: 'layout-dashboard', atencion: 'user-check', pensionados: 'award', reportes: 'bar-chart-3' };
-    const colors = { dashboard: 'header-blue', atencion: 'header-green', pensionados: 'header-gold', reportes: 'header-purple' };
+    const titles = { dashboard: 'Panel de Control', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas', usuarios: 'Gestión de Usuarios' };
+    const icons = { dashboard: 'layout-dashboard', atencion: 'user-check', pensionados: 'award', reportes: 'bar-chart-3', usuarios: 'users' };
+    const colors = { dashboard: 'header-blue', atencion: 'header-green', pensionados: 'header-gold', reportes: 'header-purple', usuarios: 'header-blue' };
     const topbarTitle = document.getElementById('topbar-title');
     if (topbarTitle) {
         topbarTitle.innerHTML = `
@@ -118,6 +124,33 @@ function renderView(view) {
     else if (view === 'atencion') initAtencion();
     else if (view === 'pensionados') initPensionados();
     else if (view === 'reportes') renderReportes();
+    else if (view === 'usuarios') renderUsuariosTable();
+
+    applyRoleRestrictionsToButtons(); // Aplica restricciones al renderizar
+}
+
+// Oculta UI según rol
+function applyRoleRestrictions() {
+    if (currentUserRole === 'admin') {
+        const conf = document.getElementById('nav-sec-config');
+        if (conf) conf.style.display = 'block';
+        const usu = document.getElementById('nav-item-usuarios');
+        if (usu) usu.style.display = 'flex';
+    } else {
+        const conf = document.getElementById('nav-sec-config');
+        if (conf) conf.remove();
+        const usu = document.getElementById('nav-item-usuarios');
+        if (usu) usu.remove();
+    }
+}
+
+// Oculta botones de eliminar según rol
+function applyRoleRestrictionsToButtons() {
+    if (currentUserRole !== 'admin') {
+        document.querySelectorAll('.btn-danger').forEach(btn => {
+            btn.remove();
+        });
+    }
 }
 
 // ── DATE DISPLAY 
@@ -1360,4 +1393,118 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializarEventosPerfil);
 } else {
     inicializarEventosPerfil();
+}
+
+// ── GESTIÓN DE USUARIOS ──
+
+let usuariosData = [];
+let editUsuarioUsername = null;
+let editUsuarioOldPass = null;
+
+async function renderUsuariosTable() {
+    if (currentUserRole !== 'admin') return;
+    const tbody = document.getElementById('usu-tbody');
+    try {
+        usuariosData = await fsGetUsuarios();
+        
+        if (usuariosData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-title">Sin usuarios</div></div></td></tr>`;
+        } else {
+            tbody.innerHTML = usuariosData.map(u => `
+                <tr>
+                    <td style="font-weight: bold;">${u.username}</td>
+                    <td><span class="tag ${u.role === 'admin' ? 'tag-prest' : 'tag-otras'}">${u.role.toUpperCase()}</span></td>
+                    <td>${u.role === 'admin' ? '********' : (u.password || '********')}</td>
+                    <td>${fmt_date(new Date(u.timestamp).toLocaleDateString('sv-SE'))}</td>
+                    <td>
+                        ${u.role !== 'admin' ? `
+                        <button class="btn btn-outline btn-sm" onclick="editUsuario('${u.username}', '${u.password}')">Cambiar Clave</button>
+                        <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteUsuario('${u.username}', '${u.password}')">Eliminar</button>
+                        ` : '<span style="font-size:12px;color:#aaa;">Principal</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+    } catch(e) {
+        toast('Error al cargar usuarios', 'error');
+        console.error(e);
+    }
+}
+
+function openUsuarioModal() {
+    editUsuarioUsername = null;
+    editUsuarioOldPass = null;
+    document.getElementById('modal-usu-title').textContent = 'Registrar Operador';
+    document.getElementById('usu-username').value = '';
+    document.getElementById('usu-username').disabled = false;
+    document.getElementById('usu-password').value = '';
+    document.getElementById('modal-usuario').classList.remove('hidden');
+}
+
+function editUsuario(username, oldPass) {
+    editUsuarioUsername = username;
+    editUsuarioOldPass = oldPass;
+    document.getElementById('modal-usu-title').textContent = 'Cambiar Clave de Operador';
+    document.getElementById('usu-username').value = username;
+    document.getElementById('usu-username').disabled = true;
+    document.getElementById('usu-password').value = '';
+    document.getElementById('modal-usuario').classList.remove('hidden');
+}
+
+function closeUsuarioModal() {
+    document.getElementById('modal-usuario').classList.add('hidden');
+}
+
+async function saveUsuario() {
+    const username = document.getElementById('usu-username').value.trim();
+    const password = document.getElementById('usu-password').value;
+    
+    if (!username || password.length < 6) {
+        toast('Usuario requerido y contraseña mín. 6 caracteres.', 'error');
+        return;
+    }
+    
+    const btn = document.getElementById('btn-save-usuario');
+    btn.disabled = true;
+    btn.innerHTML = 'Guardando...';
+    
+    try {
+        if (editUsuarioUsername) {
+            // Edit
+            await fsUpdateOperadorPassword(username, editUsuarioOldPass, password);
+            toast('Contraseña actualizada correctamente.');
+        } else {
+            // Create
+            if (usuariosData.some(u => u.username === username)) {
+                toast('El nombre de usuario ya existe.', 'error');
+                btn.disabled = false;
+                btn.innerHTML = 'Guardar Usuario';
+                return;
+            }
+            await fsCreateOperador(username, password);
+            toast('Operador registrado correctamente.');
+        }
+        closeUsuarioModal();
+        renderUsuariosTable();
+    } catch(e) {
+        toast('Error: ' + e.message, 'error');
+        console.error(e);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Guardar Usuario';
+    }
+}
+
+async function deleteUsuario(username, oldPass) {
+    const ok = await customConfirm({ title: '¿Eliminar Operador?', msg: 'Se eliminará la cuenta permanentemente.', okLabel: 'Sí, eliminar', okClass: 'btn-danger', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass: 'danger' });
+    if (!ok) return;
+    
+    try {
+        await fsDeleteOperador(username, oldPass);
+        toast('Usuario eliminado');
+        renderUsuariosTable();
+    } catch(e) {
+        toast('Error al eliminar: ' + e.message, 'error');
+        console.error(e);
+    }
 }

@@ -43,18 +43,6 @@ async function handleLogin() {
     try {
         await auth.signInWithEmailAndPassword(user + '@ivss.gob.ve', pass);
         // onAuthStateChanged handles the rest
-
-        // GUARDAR CREDENCIALES SI "RECORDAR CONTRASEÑA" ESTÁ MARCADO
-        const rememberMe = document.getElementById('login-remember-me').checked;
-        if (rememberMe) {
-            localStorage.setItem('remember_user', user); 
-            localStorage.setItem('remember_pass', pass);
-            localStorage.setItem('remember_checked', 'true');
-        } else {
-            localStorage.removeItem('remember_user');
-            localStorage.removeItem('remember_pass');
-            localStorage.removeItem('remember_checked');
-        }
     } catch (e) {
         setLoginLoading(false);
         const msgs = {
@@ -223,10 +211,34 @@ async function fsSyncCiudadano(cedula, dataToSync) {
 // Ocultar login de inmediato; Firebase restaurará sesión si existe (no flash en recarga)
 document.getElementById('login-screen').style.display = 'none';
 
+let currentUserRole = 'operador'; // default role
+
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         setLoginLoading(true);
         try {
+            // Fetch user role
+            const userDoc = await db.collection('usuarios').doc(user.email).get();
+            if (userDoc.exists) {
+                currentUserRole = userDoc.data().role || 'operador';
+            } else {
+                // Si es el admin por defecto y no existe en Firestore, lo creamos
+                if (user.email === 'admin@ivss.gob.ve') {
+                    currentUserRole = 'admin';
+                    await db.collection('usuarios').doc(user.email).set({
+                        email: user.email,
+                        username: 'admin',
+                        role: 'admin',
+                        timestamp: Date.now()
+                    });
+                } else {
+                    currentUserRole = 'operador';
+                }
+            }
+
+            // Aplicar restricciones de UI según el rol
+            applyRoleRestrictions();
+
             await loadAllData();
         } catch (e) {
             console.error('Error cargando datos de Firestore:', e);
@@ -258,9 +270,77 @@ async function fsUpdateAdminProfile(nuevoUser, nuevaPass) {
     // 1. Si cambió el nombre de usuario (email)
     if (nuevoEmail !== emailOriginal) {
         await user.updateEmail(nuevoEmail);
+        
+        // Actualizar en Firestore la colección de usuarios (borrar el viejo y crear el nuevo)
+        const oldDoc = await db.collection('usuarios').doc(emailOriginal).get();
+        if (oldDoc.exists) {
+            const data = oldDoc.data();
+            data.email = nuevoEmail;
+            data.username = nuevoUser;
+            await db.collection('usuarios').doc(nuevoEmail).set(data);
+            await db.collection('usuarios').doc(emailOriginal).delete();
+        }
     }
     // 2. Si se ingresó una nueva contraseña
     if (nuevaPass) {
         await user.updatePassword(nuevaPass);
     }
+}
+
+// ── FIRESTORE CRUD · USUARIOS (Admin Only) ──────────────────────
+
+async function fsGetUsuarios() {
+    const snap = await db.collection('usuarios').get();
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function fsCreateOperador(username, password) {
+    const email = username + "@ivss.gob.ve";
+    
+    // Crear usuario en Firestore para guardar su info y contraseña (para fines administrativos)
+    await db.collection('usuarios').doc(email).set({
+        username: username,
+        email: email,
+        password: password, // Almacenado localmente para administración
+        role: 'operador',
+        timestamp: Date.now()
+    });
+
+    // Usar la instancia secundaria para crear el usuario en Auth sin perder la sesión actual
+    await secondaryAuth.createUserWithEmailAndPassword(email, password);
+    await secondaryAuth.signOut(); // Limpiamos la sesión secundaria
+}
+
+async function fsUpdateOperadorPassword(username, oldPassword, newPassword) {
+    const email = username + "@ivss.gob.ve";
+    
+    // Para cambiar la contraseña de otro usuario sin Backend:
+    // 1. Iniciar sesión con la instancia secundaria usando su vieja clave
+    await secondaryAuth.signInWithEmailAndPassword(email, oldPassword);
+    
+    // 2. Cambiar la contraseña
+    const secUser = secondaryAuth.currentUser;
+    await secUser.updatePassword(newPassword);
+    await secondaryAuth.signOut();
+
+    // 3. Actualizar la nueva contraseña en Firestore
+    await db.collection('usuarios').doc(email).update({
+        password: newPassword
+    });
+}
+
+async function fsDeleteOperador(username, oldPassword) {
+    const email = username + "@ivss.gob.ve";
+    
+    // 1. Iniciar sesión con instancia secundaria para eliminarlo de Auth
+    try {
+        await secondaryAuth.signInWithEmailAndPassword(email, oldPassword);
+        const secUser = secondaryAuth.currentUser;
+        if (secUser) await secUser.delete();
+    } catch(e) {
+        console.warn("Usuario no encontrado en Auth o contraseña incorrecta, se procederá a borrar en BD", e);
+    }
+    
+    // 2. Borrar de Firestore
+    await db.collection('usuarios').doc(email).delete();
 }
