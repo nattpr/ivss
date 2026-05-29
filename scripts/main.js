@@ -296,7 +296,12 @@ function getFilteredAten() {
         const matchM = !mes || getMes(r.fecha) === mes;
         const matchSv = !serv || r.servicio === serv;
         return matchS && matchM && matchSv;
-    }).sort((a, b) => b.fecha.localeCompare(a.fecha));
+    }).sort((a, b) => {
+        const fA = a.fecha || '';
+        const fB = b.fecha || '';
+        if (fB !== fA) return fB.localeCompare(fA);
+        return (b.timestamp || 0) - (a.timestamp || 0);
+    });
 }
 
 function renderAtencionTable() {
@@ -456,8 +461,8 @@ async function saveAtencion() {
             await fsAddAten({ nacionalidad, fecha, servicio, nombre, cedula, telefono, empresa, rif });
             toast('Atención registrada ✓');
         }
-        // Sincronizar datos personales con el resto de registros
-        await fsSyncCiudadano(cedula, { nombre, telefono, nacionalidad });
+        // Sincronizar datos personales con el resto de registros en segundo plano (sin await)
+        fsSyncCiudadano(cedula, { nombre, telefono, nacionalidad }).catch(e => console.error("Error en sincronización:", e));
 
         closeAtencionModal();
         renderAtencionTable();
@@ -505,22 +510,13 @@ function getFilteredPens() {
         const matchS = !search || r.nombre.toLowerCase().includes(search) || (r.cedula || '').includes(search);
         const matchM = !mes || r.mes === mes;
         const matchG = !genero || r.genero === genero;
-        const matchP = !pension || (r.tipoPension || '').includes(pension);
+        const matchP = !pension || r.tipoPension === pension;
         return matchS && matchM && matchG && matchP;
      }).sort((a, b) => {
         const fA = a.fecha || a.fechaRegistro || '';
         const fB = b.fecha || b.fechaRegistro || '';
-        if (fB !== fA) {
-            return fB.localeCompare(fA); // Más reciente primero
-        }
-         const tA = a.timestamp || 0;
-        const tB = b.timestamp || 0;
-        if (tB !== tA) {
-            return tB - tA; // Coloca el más reciente arriba
-        }
-        
-        // 3. Fallback: Orden alfabético si no tienen marca de tiempo
-        return (a.nombre || '').localeCompare(b.nombre || '');
+        if (fB !== fA) return fB.localeCompare(fA);
+        return (b.timestamp || 0) - (a.timestamp || 0);
     });
 }
 
@@ -762,8 +758,8 @@ async function savePensionado() {
             await fsAddPens({ oficina: 'OA CABIMAS', fechaRegistro: new Date().toISOString().split('T')[0], ...data });
             toast('Pensionado registrado ✓');
         }
-        // Sincronizar datos personales con el resto de registros
-        await fsSyncCiudadano(cedula, data);
+        // Sincronizar datos personales con el resto de registros en segundo plano (sin await)
+        fsSyncCiudadano(cedula, data).catch(e => console.error("Error en sincronización:", e));
 
         closePensionadoModal();
         renderPensTable();
@@ -1448,29 +1444,44 @@ async function renderUsuariosTable() {
     if (currentUserRole !== 'admin') return;
     const tbody = document.getElementById('usu-tbody');
     try {
-        usuariosData = await fsGetUsuarios();
-        
         if (usuariosData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-title">Sin usuarios</div></div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-title">Cargando usuarios...</div></div></td></tr>`;
+            usuariosData = await fsGetUsuarios();
         } else {
-            tbody.innerHTML = usuariosData.map(u => `
-                <tr>
-                    <td style="font-weight: bold;">${u.username}</td>
-                    <td><span class="tag ${u.role === 'admin' ? 'tag-prest' : 'tag-otras'}">${u.role.toUpperCase()}</span></td>
-                    <td>${u.role === 'admin' ? '********' : (u.password || '********')}</td>
-                    <td>${fmt_date(new Date(u.timestamp).toLocaleDateString('sv-SE'))}</td>
-                    <td>
-                        ${u.role !== 'admin' ? `
-                        <button class="btn btn-outline btn-sm" onclick="editUsuario('${u.username}', '${u.password}')">Cambiar Clave</button>
-                        <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteUsuario('${u.username}', '${u.password}')">Eliminar</button>
-                        ` : '<span style="font-size:12px;color:#aaa;">Principal</span>'}
-                    </td>
-                </tr>
-            `).join('');
+            // Carga instantánea de memoria local
+            dibujarTablaUsuarios(tbody);
+            // Refresco asíncrono silencioso de fondo
+            fsGetUsuarios().then(newData => {
+                usuariosData = newData;
+                dibujarTablaUsuarios(tbody);
+            }).catch(console.error);
+            return;
         }
+        dibujarTablaUsuarios(tbody);
     } catch(e) {
         toast('Error al cargar usuarios', 'error');
         console.error(e);
+    }
+}
+
+function dibujarTablaUsuarios(tbody) {
+    if (usuariosData.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5"><div class="empty"><div class="empty-title">Sin usuarios</div></div></td></tr>`;
+    } else {
+        tbody.innerHTML = usuariosData.map(u => `
+            <tr>
+                <td style="font-weight: bold;">${u.username}</td>
+                <td><span class="tag ${u.role === 'admin' ? 'tag-prest' : 'tag-otras'}">${u.role.toUpperCase()}</span></td>
+                <td>${u.role === 'admin' ? '********' : (u.password || '********')}</td>
+                <td>${fmt_date(new Date(u.timestamp).toLocaleDateString('sv-SE'))}</td>
+                <td>
+                    ${u.role !== 'admin' ? `
+                    <button class="btn btn-outline btn-sm" onclick="editUsuario('${u.username}', '${u.password}')">Cambiar Clave</button>
+                    <button class="btn btn-danger btn-sm" style="margin-left:4px" onclick="deleteUsuario('${u.username}', '${u.password}')">Eliminar</button>
+                    ` : '<span style="font-size:12px;color:#aaa;">Principal</span>'}
+                </td>
+            </tr>
+        `).join('');
     }
 }
 
@@ -1535,11 +1546,11 @@ async function saveUsuario() {
     
     try {
         if (editUsuarioUsername) {
-            // Edit
+            // Edit síncrono para asegurar consistencia en Auth
             await fsUpdateOperadorPassword(username, editUsuarioOldPass, password);
             toast('Contraseña actualizada correctamente.');
         } else {
-            // Create
+            // Create síncrono para asegurar consistencia en Auth
             if (usuariosData.some(u => u.username === username)) {
                 toast('El nombre de usuario ya existe.', 'error');
                 btn.disabled = false;
@@ -1565,6 +1576,7 @@ async function deleteUsuario(username, oldPass) {
     if (!ok) return;
     
     try {
+        // Eliminar síncrono para asegurar consistencia en Auth
         await fsDeleteOperador(username, oldPass);
         toast('Usuario eliminado');
         renderUsuariosTable();

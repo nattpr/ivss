@@ -119,8 +119,12 @@ function getDailyStats() {
 
 // ── FIRESTORE CRUD · ATENCIÓN ─────────────────────────
 async function fsAddAten(data) {
-    const ref = await db.collection('atencion').add(data);
-    atencionData.unshift({ id: ref.id, ...data });
+    const dataConTime = {
+        timestamp: Date.now(),
+        ...data
+    };
+    const ref = await db.collection('atencion').add(dataConTime);
+    atencionData.unshift({ id: ref.id, ...dataConTime });
 }
 async function fsUpdateAten(id, data) {
     await db.collection('atencion').doc(id).update(data);
