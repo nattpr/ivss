@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -432,11 +432,19 @@
                 <button class="btn btn-primary" onclick="openUsuarioModal()">+ Registrar Operador</button>
             </div>
             <div class="card">
-                <div class="card-header">
-                    <div class="card-title">Cuentas Registradas</div>
+                <div class="card-header" style="background: linear-gradient(135deg, #1e3a8a 0%, #0d2468 100%); padding: 18px 24px; border-bottom: none;">
+                    <div class="card-title" style="color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f3c66f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        Cuentas de Operadores Activas
+                    </div>
                 </div>
                 <div class="table-wrap">
-                    <table>
+                    <table class="tabla-usuarios-unica">
                         <thead>
                             <tr>
                                 <th>Usuario</th>
@@ -455,9 +463,11 @@
 
     <!-- MODAL USUARIO -->
     <div id="modal-usuario" class="modal-overlay hidden">
-        <div class="modal" style="max-width: 440px;">
-            <div class="modal-header">
-                <div class="modal-title" id="modal-usu-title">Registrar Operador</div>
+        <div class="usu-modal-card">
+            <!-- Barra de brillo superior -->
+            <div class="usu-glow-bar"></div>
+            <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 15px 24px;">
+                <h3 class="modal-title" id="modal-usu-title" style="color: #1e293b; font-size: 17px; font-weight: 700;">Registrar Operador</h3>
                 <button class="modal-close" onclick="closeUsuarioModal()">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -465,19 +475,62 @@
                     </svg>
                 </button>
             </div>
-            <div class="modal-body">
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label class="form-label">Nombre de Usuario (ej: operador1)</label>
-                    <input class="form-input" type="text" id="usu-username" placeholder="operador1">
+            <div class="modal-body" style="padding: 24px;">
+                <!-- Avatar Pulsante -->
+                <div class="usu-avatar-wrap">
+                    <div class="usu-avatar-pulse"></div>
+                    <div class="usu-avatar">O</div>
                 </div>
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label class="form-label">Contraseña</label>
-                    <input class="form-input" type="password" id="usu-password" placeholder="Mínimo 6 caracteres" minlength="6">
+                <p style="font-size: 13px; color: #64748b; text-align: center; margin-bottom: 24px; line-height: 1.5;">
+                    Crea o modifica las credenciales del operador para habilitar el acceso al sistema del IVSS.
+                </p>
+
+                <!-- Input Nombre de Usuario -->
+                <div class="usu-field-group">
+                    <label class="usu-label">Nombre de Usuario (ej: operador1)</label>
+                    <div class="usu-input-container">
+                        <!-- Icono de usuario -->
+                        <svg class="usu-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        <input class="usu-input" type="text" id="usu-username" placeholder="operador1">
+                    </div>
+                </div>
+
+                <!-- Input Contraseña -->
+                <div class="usu-field-group" style="margin-bottom: 25px;">
+                    <label class="usu-label">Contraseña</label>
+                    <div class="usu-input-container">
+                        <!-- Icono de candado -->
+                        <svg class="usu-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input class="usu-input" type="password" id="usu-password" placeholder="Mínimo 6 caracteres" minlength="6" style="padding-right: 40px !important;">
+
+                        <!-- Botón Ojo para el modal de operadores -->
+                        <button type="button" id="usu-toggle-pass"
+                            style="position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; outline: none;">
+                            <!-- Icono Ojo Abierto -->
+                            <svg id="usu-eye-open" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <!-- Icono Ojo Cerrado -->
+                            <svg id="usu-eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeUsuarioModal()">Cancelar</button>
-                <button class="btn btn-primary" id="btn-save-usuario" onclick="saveUsuario()">Guardar Usuario</button>
+            <div class="modal-footer" style="border-top: 1px solid #f1f5f9; padding-top: 15px; padding-bottom: 24px; padding-right: 24px;">
+                <button class="btn btn-outline" onclick="closeUsuarioModal()" style="border-radius: 10px; padding: 10px 20px;">Cancelar</button>
+                <button class="btn usu-btn-save" id="btn-save-usuario" onclick="saveUsuario()" style="border-radius: 10px; padding: 10px 20px; font-weight: 600;">Guardar Usuario</button>
             </div>
         </div>
     </div>
@@ -912,6 +965,320 @@
         </div>
     </div>
 
+    <!-- MODAL DE MI PERFIL -->
+    <div id="modal-perfil" class="modal-overlay hidden">
+        <!-- Estilos encapsulados para no interferir con el CSS global -->
+        <style>
+            .perfil-card {
+                background: rgba(255, 255, 255, 0.98);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(200, 146, 42, 0.35);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(200, 146, 42, 0.08);
+                border-radius: 20px;
+                overflow: hidden;
+                position: relative;
+                max-width: 440px;
+                width: 90%;
+                margin: auto;
+            }
+
+            .perfil-glow-bar {
+                height: 5px;
+                background: linear-gradient(90deg, #c8922a 0%, #f3c66f 50%, #c8922a 100%);
+            }
+
+            .perfil-avatar-wrap {
+                display: flex;
+                justify-content: center;
+                margin: 25px 0 15px 0;
+                position: relative;
+            }
+
+            .perfil-avatar {
+                width: 68px;
+                height: 68px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #c8922a 0%, #f3c66f 100%);
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+                font-weight: 800;
+                box-shadow: 0 8px 20px rgba(200, 146, 42, 0.3);
+                border: 3px solid #fff;
+                z-index: 2;
+                user-select: none;
+            }
+
+            .perfil-avatar-pulse {
+                position: absolute;
+                width: 68px;
+                height: 68px;
+                border-radius: 50%;
+                background: rgba(200, 146, 42, 0.35);
+                animation: avatarPulse 2.2s infinite ease-out;
+                z-index: 1;
+            }
+
+            @keyframes avatarPulse {
+                0% {
+                    transform: scale(0.95);
+                    opacity: 0.8;
+                }
+
+                50% {
+                    transform: scale(1.15);
+                    opacity: 0.4;
+                }
+
+                100% {
+                    transform: scale(1.35);
+                    opacity: 0;
+                }
+            }
+
+            .perfil-field-group {
+                margin-bottom: 18px;
+            }
+
+            .perfil-label {
+                color: #1e293b;
+                font-weight: 600;
+                font-size: 13px;
+                display: block;
+                margin-bottom: 6px;
+            }
+
+            .perfil-input-container {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+
+            .perfil-input-icon {
+                position: absolute;
+                left: 12px;
+                color: #94a3b8;
+                pointer-events: none;
+            }
+
+            .perfil-input {
+                width: 100%;
+                padding: 10px 12px 10px 38px !important;
+                border: 1.5px solid #cbd5e1 !important;
+                border-radius: 10px !important;
+                color: #1e293b !important;
+                font-size: 14px !important;
+                background-color: #f8fafc !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            }
+
+            .perfil-input:focus {
+                border-color: #c8922a !important;
+                background-color: #fff !important;
+                box-shadow: 0 0 0 3.5px rgba(200, 146, 42, 0.18) !important;
+                outline: none;
+            }
+
+            .strength-bar-container {
+                display: flex;
+                gap: 5px;
+                margin-top: 6px;
+            }
+
+            .strength-segment {
+                height: 5px;
+                flex: 1;
+                background-color: #e2e8f0;
+                border-radius: 3px;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .perfil-btn-save {
+                background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+                color: #fff;
+                border: 1px solid rgba(200, 146, 42, 0.2);
+                transition: all 0.3s ease;
+            }
+
+            .perfil-btn-save:hover {
+                transform: translateY(-1.5px);
+                box-shadow: 0 5px 15px rgba(200, 146, 42, 0.25);
+                border-color: #c8922a;
+            }
+        </style>
+        <div class="perfil-card">
+            <!-- Barra de brillo superior -->
+            <div class="perfil-glow-bar"></div>
+            <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 15px 24px;">
+                <h3 class="modal-title" style="color: #1e293b; font-size: 17px; font-weight: 700;">Perfil de Admin</h3>
+                <button class="modal-close" onclick="closePerfilModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding: 24px;">
+                <!-- Avatar Pulsante -->
+                <div class="perfil-avatar-wrap">
+                    <div id="perfil-avatar-pulse-el" class="perfil-avatar-pulse"></div>
+                    <div id="perfil-avatar-text" class="perfil-avatar">U</div>
+                </div>
+                <p style="font-size: 13px; color: #64748b; text-align: center; margin-bottom: 24px; line-height: 1.5;">
+                    Personaliza tus credenciales para el acceso administrativo al Sistema de Atención del IVSS.
+                </p>
+                <!-- Input Usuario -->
+                <div class="perfil-field-group">
+                    <label class="perfil-label">Nombre de Usuario</label>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="perfil-input-container" style="flex: 1;">
+                            <!-- Icono de usuario -->
+                            <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                                <circle cx="12" cy="7" r="4" />
+                            </svg>
+                            <input type="text" id="perfil-user" class="perfil-input" placeholder="admin">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="perfil-field-group">
+                    <label class="perfil-label">Contraseña Actual</label>
+                    <div class="perfil-input-container">
+                        <!-- Icono de llave -->
+                        <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4c.6-.6.6-1.6 0-2.2L12 10" />
+                            <path d="M19 3a5 5 0 0 0-5 5c0 1.2.4 2.2 1.2 3L19 15l4.3-4.3c.8-.8 1.2-1.8 1.2-3a5 5 0 0 0-5-5Z" />
+                            <circle cx="19" cy="8" r="1" />
+                        </svg>
+                        <input type="password" id="perfil-pass-old" class="perfil-input"
+                            placeholder="Contraseña actual" maxlength="15">
+                    </div>
+                </div>
+
+                <!-- Input Contraseña Nueva -->
+                <div class="perfil-field-group">
+                    <label class="perfil-label">Nueva Contraseña</label>
+                    <div class="perfil-input-container">
+                        <!-- Icono de candado -->
+                        <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input type="password" id="perfil-pass" class="perfil-input"
+                            placeholder="Mínimo 7 y máximo 15 caracteres" style="padding-right: 40px !important;"
+                            maxlength="15">
+
+                        <!-- Botón Ojo -->
+                        <button type="button" id="perfil-toggle-pass"
+                            style="position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; outline: none;">
+                            <svg id="perfil-eye-open" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                <circle cx="12" cy="12" r="3" />
+                            </svg>
+                            <svg id="perfil-eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16"
+                                height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                                <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
+                                <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
+                                <line x1="2" y1="2" x2="22" y2="22" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Barra de fortaleza por segmentos -->
+                    <div style="margin-top: 7px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
+                            <span style="color: #64748b;">Seguridad de la clave:</span>
+                            <span id="pass-strength-text" style="font-weight: 700; color: #94a3b8;">Vacía</span>
+                        </div>
+                        <div class="strength-bar-container">
+                            <div id="strength-seg-1" class="strength-segment"></div>
+                            <div id="strength-seg-2" class="strength-segment"></div>
+                            <div id="strength-seg-3" class="strength-segment"></div>
+                            <div id="strength-seg-4" class="strength-segment"></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Input Confirmar Contraseña -->
+                <div class="perfil-field-group" style="margin-bottom: 25px;">
+                    <label class="perfil-label">Confirmar Contraseña</label>
+                    <div class="perfil-input-container">
+                        <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        <input type="password" id="perfil-pass-confirm" class="perfil-input"
+                            placeholder="Confirma tu nueva clave" maxlength="15">
+                    </div>
+                </div>
+                <!-- Acciones -->
+                <div
+                    style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 15px;">
+                    <button class="btn btn-outline" onclick="closePerfilModal()"
+                        style="border-radius: 10px; padding: 10px 20px;">Cancelar</button>
+                    <button id="perfil-save-btn" class="btn perfil-btn-save" onclick="savePerfilCredentials()"
+                        style="border-radius: 10px; padding: 10px 20px; font-weight: 600;">Guardar Cambios</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL REPORTE MENSUAL -->
+    <div id="modal-reporte-mensual" class="modal-backdrop" style="display: none;">
+      <div class="modal-content">
+        
+        <!-- Encabezado del Modal -->
+        <div class="modal-header">
+          <h3 id="modal-reporte-titulo">Resumen de Pensionados</h3>
+          <button class="btn-close" onclick="cerrarModalReporteMensual()">&times;</button>
+        </div>
+        
+        <!-- Cuerpo del Modal Dividido en 2 Columnas -->
+        <div class="modal-body-split">
+          <div class="calendario-col">
+            <h4>Seleccione un Día</h4>
+            <div id="grid-dias-reporte" class="grid-dias"></div>
+          </div>
+          <div class="detalles-col">
+            <h4 id="detalles-dia-titulo">Pensionados Atendidos: Seleccione un día</h4>
+            <div class="tabla-contenedor-modal">
+              <table class="tabla-atencion-modal">
+                <thead>
+                  <tr>
+                    <th style="width: 25%;">Cédula</th>
+                    <th style="width: 50%;">Nombres y Apellidos</th>
+                    <th style="width: 25%;">Tipo de Pensión</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-cuerpo-pensionados-dia">
+                  <tr>
+                    <td colspan="3" class="text-center-modal">Seleccione un día de la izquierda para cargar la información.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ================================================================
      SCRIPT
 ================================================================ -->
@@ -919,318 +1286,4 @@
     <script src="./scripts/firebase-ops.js"></script>
     <script src="./scripts/main.js"></script>
 </body>
-
-<!-- MODAL DE MI PERFIL -->
-<div id="modal-perfil" class="modal-overlay hidden">
-    <!-- Estilos encapsulados para no interferir con el CSS global -->
-    <style>
-        .perfil-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(200, 146, 42, 0.35);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 40px rgba(200, 146, 42, 0.08);
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            max-width: 440px;
-            width: 90%;
-            margin: auto;
-        }
-
-        .perfil-glow-bar {
-            height: 5px;
-            background: linear-gradient(90deg, #c8922a 0%, #f3c66f 50%, #c8922a 100%);
-        }
-
-        .perfil-avatar-wrap {
-            display: flex;
-            justify-content: center;
-            margin: 25px 0 15px 0;
-            position: relative;
-        }
-
-        .perfil-avatar {
-            width: 68px;
-            height: 68px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #c8922a 0%, #f3c66f 100%);
-            color: #fff;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            font-weight: 800;
-            box-shadow: 0 8px 20px rgba(200, 146, 42, 0.3);
-            border: 3px solid #fff;
-            z-index: 2;
-            user-select: none;
-        }
-
-        .perfil-avatar-pulse {
-            position: absolute;
-            width: 68px;
-            height: 68px;
-            border-radius: 50%;
-            background: rgba(200, 146, 42, 0.35);
-            animation: avatarPulse 2.2s infinite ease-out;
-            z-index: 1;
-        }
-
-        @keyframes avatarPulse {
-            0% {
-                transform: scale(0.95);
-                opacity: 0.8;
-            }
-
-            50% {
-                transform: scale(1.15);
-                opacity: 0.4;
-            }
-
-            100% {
-                transform: scale(1.35);
-                opacity: 0;
-            }
-        }
-
-        .perfil-field-group {
-            margin-bottom: 18px;
-        }
-
-        .perfil-label {
-            color: #1e293b;
-            font-weight: 600;
-            font-size: 13px;
-            display: block;
-            margin-bottom: 6px;
-        }
-
-        .perfil-input-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .perfil-input-icon {
-            position: absolute;
-            left: 12px;
-            color: #94a3b8;
-            pointer-events: none;
-        }
-
-        .perfil-input {
-            width: 100%;
-            padding: 10px 12px 10px 38px !important;
-            border: 1.5px solid #cbd5e1 !important;
-            border-radius: 10px !important;
-            color: #1e293b !important;
-            font-size: 14px !important;
-            background-color: #f8fafc !important;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        }
-
-        .perfil-input:focus {
-            border-color: #c8922a !important;
-            background-color: #fff !important;
-            box-shadow: 0 0 0 3.5px rgba(200, 146, 42, 0.18) !important;
-            outline: none;
-        }
-
-        .strength-bar-container {
-            display: flex;
-            gap: 5px;
-            margin-top: 6px;
-        }
-
-        .strength-segment {
-            height: 5px;
-            flex: 1;
-            background-color: #e2e8f0;
-            border-radius: 3px;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .perfil-btn-save {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            color: #fff;
-            border: 1px solid rgba(200, 146, 42, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .perfil-btn-save:hover {
-            transform: translateY(-1.5px);
-            box-shadow: 0 5px 15px rgba(200, 146, 42, 0.25);
-            border-color: #c8922a;
-        }
-    </style>
-    <div class="perfil-card">
-        <!-- Barra de brillo superior -->
-        <div class="perfil-glow-bar"></div>
-        <div class="modal-header" style="border-bottom: 1px solid #f1f5f9; padding: 15px 24px;">
-            <h3 class="modal-title" style="color: #1e293b; font-size: 17px; font-weight: 700;">Perfil de Usuario</h3>
-            <button class="modal-close" onclick="closePerfilModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-            </button>
-        </div>
-
-        <div class="modal-body" style="padding: 24px;">
-            <!-- Avatar Pulsante -->
-            <div class="perfil-avatar-wrap">
-                <div id="perfil-avatar-pulse-el" class="perfil-avatar-pulse"></div>
-                <div id="perfil-avatar-text" class="perfil-avatar">U</div>
-            </div>
-            <p style="font-size: 13px; color: #64748b; text-align: center; margin-bottom: 24px; line-height: 1.5;">
-                Personaliza tus credenciales para el acceso administrativo al Sistema de Atención del IVSS.
-            </p>
-            <!-- Input Usuario -->
-            <div class="perfil-field-group">
-                <label class="perfil-label">Nombre de Usuario</label>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="perfil-input-container" style="flex: 1;">
-                        <!-- Icono de usuario -->
-                        <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                            <circle cx="12" cy="7" r="4" />
-                        </svg>
-                        <input type="text" id="perfil-user" class="perfil-input" placeholder="admin">
-                    </div>
-                </div>
-            </div>
-
-            <div class="perfil-field-group">
-                <label class="perfil-label">Contraseña Actual</label>
-                <div class="perfil-input-container">
-                    <!-- Icono de llave -->
-                    <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4c.6-.6.6-1.6 0-2.2L12 10" />
-                        <path d="M19 3a5 5 0 0 0-5 5c0 1.2.4 2.2 1.2 3L19 15l4.3-4.3c.8-.8 1.2-1.8 1.2-3a5 5 0 0 0-5-5Z" />
-                        <circle cx="19" cy="8" r="1" />
-                    </svg>
-                    <input type="password" id="perfil-pass-old" class="perfil-input"
-                        placeholder="Contraseña actual" maxlength="15">
-                </div>
-            </div>
-
-            <!-- Input Contraseña Nueva -->
-            <div class="perfil-field-group">
-                <label class="perfil-label">Nueva Contraseña</label>
-                <div class="perfil-input-container">
-                    <!-- Icono de candado -->
-                    <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <input type="password" id="perfil-pass" class="perfil-input"
-                        placeholder="Mínimo 7 y máximo 15 caracteres" style="padding-right: 40px !important;"
-                        maxlength="15">
-
-                    <!-- Botón Ojo -->
-                    <button type="button" id="perfil-toggle-pass"
-                        style="position: absolute; right: 12px; background: none; border: none; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; color: #94a3b8; outline: none;">
-                        <svg id="perfil-eye-open" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                            <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <svg id="perfil-eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" width="16"
-                            height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-                            <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
-                            <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-                            <line x1="2" y1="2" x2="22" y2="22" />
-                        </svg>
-                    </button>
-                </div>
-
-                <!-- Barra de fortaleza por segmentos -->
-                <div style="margin-top: 7px;">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-bottom: 4px;">
-                        <span style="color: #64748b;">Seguridad de la clave:</span>
-                        <span id="pass-strength-text" style="font-weight: 700; color: #94a3b8;">Vacía</span>
-                    </div>
-                    <div class="strength-bar-container">
-                        <div id="strength-seg-1" class="strength-segment"></div>
-                        <div id="strength-seg-2" class="strength-segment"></div>
-                        <div id="strength-seg-3" class="strength-segment"></div>
-                        <div id="strength-seg-4" class="strength-segment"></div>
-                    </div>
-                </div>
-            </div>
-            <!-- Input Confirmar Contraseña -->
-            <div class="perfil-field-group" style="margin-bottom: 25px;">
-                <label class="perfil-label">Confirmar Contraseña</label>
-                <div class="perfil-input-container">
-                    <svg class="perfil-input-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
-                        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    <input type="password" id="perfil-pass-confirm" class="perfil-input"
-                        placeholder="Confirma tu nueva clave" maxlength="15">
-                </div>
-            </div>
-            <!-- Acciones -->
-            <div
-                style="display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #f1f5f9; padding-top: 15px;">
-                <button class="btn btn-outline" onclick="closePerfilModal()"
-                    style="border-radius: 10px; padding: 10px 20px;">Cancelar</button>
-                <button id="perfil-save-btn" class="btn perfil-btn-save" onclick="savePerfilCredentials()"
-                    style="border-radius: 10px; padding: 10px 20px; font-weight: 600;">Guardar Cambios</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="modal-reporte-mensual" class="modal-backdrop" style="display: none;">
-  <div class="modal-content">
-    
-    <!-- Encabezado del Modal -->
-    <div class="modal-header">
-      <h3 id="modal-reporte-titulo">Resumen de Pensionados</h3>
-      <button class="btn-close" onclick="cerrarModalReporteMensual()">&times;</button>
-    </div>
-    
-    <!-- Cuerpo del Modal Dividido en 2 Columnas -->
-    <div class="modal-body-split">
-      <div class="calendario-col">
-        <h4>Seleccione un Día</h4>
-        <div id="grid-dias-reporte" class="grid-dias"></div>
-      </div>
-      <div class="detalles-col">
-        <h4 id="detalles-dia-titulo">Pensionados Atendidos: Seleccione un día</h4>
-        <div class="tabla-contenedor-modal">
-          <table class="tabla-atencion-modal">
-            <thead>
-              <tr>
-                <th style="width: 25%;">Cédula</th>
-                <th style="width: 50%;">Nombres y Apellidos</th>
-                <th style="width: 25%;">Tipo de Pensión</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-cuerpo-pensionados-dia">
-              <tr>
-                <td colspan="3" class="text-center-modal">Seleccione un día de la izquierda para cargar la información.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 </html>

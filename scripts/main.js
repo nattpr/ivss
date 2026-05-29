@@ -131,16 +131,30 @@ function renderView(view) {
 
 // Oculta UI según rol
 function applyRoleRestrictions() {
+    const topbarUser = document.getElementById('topbar-user'); // Chip del usuario arriba
+    
     if (currentUserRole === 'admin') {
         const conf = document.getElementById('nav-sec-config');
         if (conf) conf.style.display = 'block';
         const usu = document.getElementById('nav-item-usuarios');
         if (usu) usu.style.display = 'flex';
+        
+        // El Administrador sí puede hacer clic en su perfil
+        if (topbarUser) {
+            topbarUser.style.cursor = 'pointer';
+            topbarUser.setAttribute('onclick', 'openPerfilModal()');
+        }
     } else {
         const conf = document.getElementById('nav-sec-config');
         if (conf) conf.remove();
         const usu = document.getElementById('nav-item-usuarios');
         if (usu) usu.remove();
+        
+        // El usuario común NO puede hacer clic en su perfil (queda plano)
+        if (topbarUser) {
+            topbarUser.style.cursor = 'default';
+            topbarUser.removeAttribute('onclick');
+        }
     }
 }
 
@@ -1202,11 +1216,14 @@ async function exportPensionadosExcel() {
 
 // FUNCIONES DE CONTROL DEL PERFIL DE ADMINISTRADOR
 function openPerfilModal() {
+    if (currentUserRole !== 'admin') return;
     const user = auth.currentUser;
     if (!user) return;
     // Leemos el displayName guardado, o el correo como respaldo
     const username = user.displayName || user.email.split('@')[0];
     document.getElementById('perfil-user').value = username;
+    const passOldEl = document.getElementById('perfil-pass-old');
+    if (passOldEl) passOldEl.value = '';
     document.getElementById('perfil-pass').value = '';
     document.getElementById('perfil-pass-confirm').value = '';
     
@@ -1234,69 +1251,72 @@ function closePerfilModal() {
 // Guarda los cambios validados y llama a Firebase con reautenticación
 async function savePerfilCredentials() {
     const nuevoNombreAlias = document.getElementById('perfil-user').value.trim();
-    const passOld = document.getElementById('perfil-pass-old').value; // <-- NUEVA LÍNEA: Captura contraseña antigua
+    const passOld = document.getElementById('perfil-pass-old').value; 
     const nuevaPass = document.getElementById('perfil-pass').value;
     const passConfirm = document.getElementById('perfil-pass-confirm').value;
     const saveBtn = document.getElementById('perfil-save-btn');
-    if (!nuevoNombreAlias) {
-        toast('El campo Usuario no puede estar vacío.', 'error');
+    
+    // Validamos que el nombre no esté vacío y que la contraseña actual tenga al menos 7 caracteres
+    if (!nuevoNombreAlias || !passOld || passOld.length < 7) {
+        toast('Usuario requerido y contraseña actual mín. 7 caracteres.', 'error');
         return;
     }
-    // Si el usuario intentó escribir una contraseña nueva, la antigua es obligatoria
-    if (nuevaPass && !passOld) {
-        toast('Por favor, ingresa tu contraseña actual para autorizar el cambio.', 'error');
-        return;
+    
+    // Si se quiere cambiar la contraseña, validamos la nueva clave
+    if (nuevaPass) {
+        if (nuevaPass.length < 7 || nuevaPass.length > 15) {
+            toast('La nueva contraseña debe tener entre 7 y 15 caracteres.', 'error');
+            return;
+        }
+        if (nuevaPass !== passConfirm) {
+            toast('Las contraseñas no coinciden.', 'error');
+            return;
+        }
     }
-    if (nuevaPass && (nuevaPass.length < 7 || nuevaPass.length > 15)) {
-        toast('La contraseña debe tener entre 7 y 15 caracteres.', 'error');
-        return;
-    }
-    if (nuevaPass && nuevaPass !== passConfirm) {
-        toast('Las contraseñas no coinciden.', 'error');
-        return;
-    }
+    
     saveBtn.disabled = true;
     saveBtn.textContent = 'Guardando...';
     try {
         const user = auth.currentUser;
-        // 1. SI EL USUARIO ESCRIBIÓ UNA NUEVA CONTRASEÑA, REAUTENTICAMOS PRIMERO
+        
+        // SIEMPRE reautenticamos al administrador con su contraseña actual antes de aplicar cambios
+        const credential = firebase.auth.EmailAuthProvider.credential(user.email, passOld);
+        await user.reauthenticateWithCredential(credential);
+        
+        // Si la reautenticación es exitosa:
+        // 1. Si hay nueva contraseña, la actualizamos
         if (nuevaPass) {
-            // Genera la credencial con el email actual y la contraseña vieja ingresada
-            const credential = firebase.auth.EmailAuthProvider.credential(user.email, passOld);
-            
-            // Reautentica al usuario en Firebase Auth
-            await user.reauthenticateWithCredential(credential);
-            
-            // Si la autenticación es exitosa, actualiza a la nueva clave
             await user.updatePassword(nuevaPass);
         }
-        // 2. ACTUALIZAMOS EL PERFIL NATIVO DE FIREBASE AUTH (Alias)
+        
+        // 2. Actualizamos el perfil nativo de Firebase (displayName)
         await user.updateProfile({
             displayName: nuevoNombreAlias
         });
-        // 3. GUARDAMOS EL NOMBRE EN FIRESTORE COMO RESPALDO
+        
+        // 3. Guardamos en Firestore
         await db.collection('perfiles').doc(user.uid).set({
             nombre_alias: nuevoNombreAlias
         }, { merge: true });
+        
         toast('Perfil actualizado con éxito.', 'success');
         
-        // 4. ACTUALIZAMOS LA BARRA SUPERIOR INMEDIATAMENTE
+        // 4. Actualizamos la barra superior
         const displayNameFormateado = nuevoNombreAlias.charAt(0).toUpperCase() + nuevoNombreAlias.slice(1);
         document.getElementById('user-display-name').textContent = displayNameFormateado;
         document.getElementById('user-avatar').textContent = nuevoNombreAlias.charAt(0).toUpperCase();
         
-        // Limpiamos los campos de contraseñas de la pantalla
+        // Limpiamos los inputs
         document.getElementById('perfil-pass-old').value = "";
         document.getElementById('perfil-pass').value = "";
         document.getElementById('perfil-pass-confirm').value = "";
         closePerfilModal();
     } catch (error) {
         console.error(error);
-        // Manejamos si la contraseña antigua es incorrecta
         if (error.code === 'auth/wrong-password') {
-            toast('La contraseña antigua es incorrecta.', 'error');
+            toast('La contraseña actual es incorrecta.', 'error');
         } else if (error.code === 'auth/requires-recent-login') {
-            toast('Por seguridad, cierra sesión y vuelve a entrar para cambiar la contraseña.', 'warning');
+            toast('Por seguridad, cierra sesión y vuelve a entrar para cambiar tus datos.', 'warning');
         } else {
             toast('Error: ' + error.message, 'error');
         }
@@ -1387,6 +1407,29 @@ function inicializarEventosPerfil() {
             }
         });
     }
+
+    // Alternador de contraseña en el modal de registro de operadores (ojito)
+    const usuToggleBtn = document.getElementById('usu-toggle-pass');
+    if (usuToggleBtn) {
+        usuToggleBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const passInput = document.getElementById('usu-password');
+            const eyeOpen = document.getElementById('usu-eye-open');
+            const eyeClosed = document.getElementById('usu-eye-closed');
+            
+            if (passInput && eyeOpen && eyeClosed) {
+                if (passInput.type === 'password') {
+                    passInput.type = 'text';
+                    eyeOpen.style.display = 'none';
+                    eyeClosed.style.display = 'block';
+                } else {
+                    passInput.type = 'password';
+                    eyeOpen.style.display = 'block';
+                    eyeClosed.style.display = 'none';
+                }
+            }
+        });
+    }
 }
 // Inicialización segura del perfil
 if (document.readyState === 'loading') {
@@ -1437,6 +1480,17 @@ function openUsuarioModal() {
     document.getElementById('modal-usu-title').textContent = 'Registrar Operador';
     document.getElementById('usu-username').value = '';
     document.getElementById('usu-username').disabled = false;
+    
+    // Reseteamos el campo de clave a tipo password y los iconos del ojo
+    const passInput = document.getElementById('usu-password');
+    if (passInput) passInput.type = 'password';
+    const eyeOpen = document.getElementById('usu-eye-open');
+    const eyeClosed = document.getElementById('usu-eye-closed');
+    if (eyeOpen && eyeClosed) {
+        eyeOpen.style.display = 'block';
+        eyeClosed.style.display = 'none';
+    }
+    
     document.getElementById('usu-password').value = '';
     document.getElementById('modal-usuario').classList.remove('hidden');
 }
@@ -1447,6 +1501,17 @@ function editUsuario(username, oldPass) {
     document.getElementById('modal-usu-title').textContent = 'Cambiar Clave de Operador';
     document.getElementById('usu-username').value = username;
     document.getElementById('usu-username').disabled = true;
+    
+    // Reseteamos el campo de clave a tipo password y los iconos del ojo
+    const passInput = document.getElementById('usu-password');
+    if (passInput) passInput.type = 'password';
+    const eyeOpen = document.getElementById('usu-eye-open');
+    const eyeClosed = document.getElementById('usu-eye-closed');
+    if (eyeOpen && eyeClosed) {
+        eyeOpen.style.display = 'block';
+        eyeClosed.style.display = 'none';
+    }
+    
     document.getElementById('usu-password').value = '';
     document.getElementById('modal-usuario').classList.remove('hidden');
 }
