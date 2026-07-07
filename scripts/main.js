@@ -23,6 +23,13 @@ function fmt_date(d) {
     const dt = new Date(d + 'T00:00:00');
     return dt.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
 }
+function setRadio(name, val) {
+    document.querySelectorAll(`[name="${name}"]`).forEach(r => r.checked = false);
+    if (val) {
+        const el = document.querySelector(`[name="${name}"][value="${val}"]`);
+        if (el) el.checked = true;
+    }
+}
 function getMes(dateStr) {
     if (!dateStr) return '';
     const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
@@ -44,6 +51,29 @@ function genTag(g) {
     return g === 'M'
         ? `<span class="tag tag-m">Masc.</span>`
         : g === 'F' ? `<span class="tag tag-f">Fem.</span>` : '—';
+}
+
+function animateCount(el, target, duration = 800) {
+    if (!el) return;
+    const end = parseInt(target, 10);
+    if (isNaN(end) || end === 0) {
+        el.textContent = target;
+        return;
+    }
+    let startTime = null;
+    function draw(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const progress = timestamp - startTime;
+        const rate = Math.min(progress / duration, 1);
+        const easeRate = rate * (2 - rate); // easeOutQuad
+        el.textContent = Math.floor(easeRate * end);
+        if (rate < 1) {
+            requestAnimationFrame(draw);
+        } else {
+            el.textContent = end;
+        }
+    }
+    requestAnimationFrame(draw);
 }
 
 function getLocalDateStr() {
@@ -97,9 +127,9 @@ function navigate(view) {
         if (el.getAttribute('onclick') === `navigate('${view}')`) el.classList.add('active');
     });
     
-    const titles = { dashboard: 'Panel de Control', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas', usuarios: 'Gestión de Usuarios' };
-    const icons = { dashboard: 'layout-dashboard', atencion: 'user-check', pensionados: 'award', reportes: 'bar-chart-3', usuarios: 'users' };
-    const colors = { dashboard: 'header-blue', atencion: 'header-green', pensionados: 'header-gold', reportes: 'header-purple', usuarios: 'header-blue' };
+    const titles = { dashboard: 'Panel de Control', atencion: 'Atención al Público', pensionados: 'Censo de Pensionados', reportes: 'Reportes y Estadísticas', usuarios: 'Gestión de Usuarios', ajustes: 'Ajustes del Sistema' };
+    const icons = { dashboard: 'layout-dashboard', atencion: 'user-check', pensionados: 'award', reportes: 'bar-chart-3', usuarios: 'users', ajustes: 'settings' };
+    const colors = { dashboard: 'header-blue', atencion: 'header-green', pensionados: 'header-gold', reportes: 'header-purple', usuarios: 'header-blue', ajustes: 'header-purple' };
     const topbarTitle = document.getElementById('topbar-title');
     if (topbarTitle) {
         topbarTitle.innerHTML = `
@@ -107,7 +137,7 @@ function navigate(view) {
                 <div class="header-icon-circle-small ${colors[view]}">
                     <i data-lucide="${icons[view]}" class="icon-nav-header-small"></i>
                 </div>
-                <span style="font-weight: 800; color: #0d2468; font-size: 18px; font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;">${titles[view]}</span>
+                <span style="font-weight: 800; color: var(--text); font-size: 18px; font-family: 'Outfit', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;">${titles[view]}</span>
             </div>
         `;
         lucide.createIcons();
@@ -125,31 +155,27 @@ function renderView(view) {
     else if (view === 'pensionados') initPensionados();
     else if (view === 'reportes') renderReportes();
     else if (view === 'usuarios') renderUsuariosTable();
+    else if (view === 'ajustes') initAjustesThemeToggle();
 
     applyRoleRestrictionsToButtons(); // Aplica restricciones al renderizar
 }
 
-// Oculta UI según rol
 function applyRoleRestrictions() {
     const topbarUser = document.getElementById('topbar-user'); // Chip del usuario arriba
+    const conf = document.getElementById('nav-sec-config');
+    const aju = document.getElementById('nav-item-ajustes');
+    
+    // Todos los usuarios autenticados deben ver "Ajustes" y su etiqueta de sección "Configuración"
+    if (conf) conf.style.setProperty('display', 'block', 'important');
+    if (aju) aju.style.setProperty('display', 'flex', 'important');
     
     if (currentUserRole === 'admin') {
-        const conf = document.getElementById('nav-sec-config');
-        if (conf) conf.style.display = 'block';
-        const usu = document.getElementById('nav-item-usuarios');
-        if (usu) usu.style.display = 'flex';
-        
         // El Administrador sí puede hacer clic en su perfil
         if (topbarUser) {
             topbarUser.style.cursor = 'pointer';
             topbarUser.setAttribute('onclick', 'openPerfilModal()');
         }
     } else {
-        const conf = document.getElementById('nav-sec-config');
-        if (conf) conf.remove();
-        const usu = document.getElementById('nav-item-usuarios');
-        if (usu) usu.remove();
-        
         // El usuario común NO puede hacer clic en su perfil (queda plano)
         if (topbarUser) {
             topbarUser.style.cursor = 'default';
@@ -161,7 +187,7 @@ function applyRoleRestrictions() {
 // Oculta botones de eliminar según rol
 function applyRoleRestrictionsToButtons() {
     if (currentUserRole !== 'admin') {
-        document.querySelectorAll('.btn-danger').forEach(btn => {
+        document.querySelectorAll('#usu-tbody .btn-danger').forEach(btn => {
             btn.remove();
         });
     }
@@ -178,7 +204,7 @@ function updateDate() {
 function renderDashboard() {
     const totalAten = atencionData.length;
     const totalPens = pensionadosData.length;
-    const mesActual = getMes(new Date().toISOString().split('T')[0]);
+    const mesActual = getMes(getLocalDateStr());
     const atenMes = atencionData.filter(r => getMes(r.fecha) === mesActual).length;
     const pensMes = pensionadosData.filter(r => r.mes === mesActual).length;
 
@@ -186,30 +212,36 @@ function renderDashboard() {
     document.getElementById('dash-stats').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Total Atención Al Público</div>
-      <div class="stat-value">${totalAten}</div>
+      <div class="stat-value animate-num" data-target="${totalAten}">0</div>
       <div class="stat-sub-text">Registros este año</div>
     </div>
     <div class="stat-card gold">
       <div class="stat-label">Pensionados Registrados</div>
-      <div class="stat-value">${totalPens}</div>
+      <div class="stat-value animate-num" data-target="${totalPens}">0</div>
       <div class="stat-sub-text">Registros este año</div>
     </div>
     <div class="stat-card green">
       <div class="stat-label">Atención Al Público Este Mes</div>
-      <div class="stat-value">${atenMes}</div>
+      <div class="stat-value animate-num" data-target="${atenMes}">0</div>
       <div class="stat-sub-text">${mesActual || 'Mes actual'}</div>
     </div>
     <div class="stat-card red">
       <div class="stat-label">Pensionados Este Mes</div>
-      <div class="stat-value">${pensMes}</div>
+      <div class="stat-value animate-num" data-target="${pensMes}">0</div>
       <div class="stat-sub-text">${mesActual || 'Mes actual'}</div>
     </div>
     <div class="stat-card dark">
       <div class="stat-label">Atendidos Hoy (Total)</div>
-      <div class="stat-value" style="color: var(--gold-light, #e8b04a);">${dailyStats.total}</div>
+      <div class="stat-value animate-num" data-target="${dailyStats.total}" style="color: var(--gold-light, #e8b04a);">0</div>
       <div class="stat-sub-text">${dailyStats.atencion} Atención + ${dailyStats.pensionados} Censo</div>
     </div>
   `;
+    
+    // Ejecutar animación de incremento en cada número del dashboard
+    document.querySelectorAll('#dash-stats .animate-num').forEach(el => {
+        animateCount(el, el.getAttribute('data-target'), 800);
+    });
+
     drawDashCharts();
 }
 
@@ -217,16 +249,162 @@ const MONTHS = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 
 const NAVY = '#002d5e', GOLD = '#c8922a';
 const PALETTE = ['#002d5e', '#1a4a8a', '#c8922a', '#e8b04a', '#1a7a4a', '#c0392b'];
 
+const bar3DPlugin = {
+    id: 'bar3DPlugin',
+    afterDatasetsDraw(chart, args, options) {
+        const { ctx } = chart;
+        const colors = options.colors || [{ left: '#4b7bec', right: '#1a4a8a', top: '#82b1ff' }];
+        const drawPercentages = options.drawPercentages || false;
+        
+        ctx.save();
+        chart.data.datasets.forEach((dataset, datasetIdx) => {
+            const meta = chart.getDatasetMeta(datasetIdx);
+            if (meta.hidden) return;
+            
+            const totalVal = dataset.data.reduce((sum, val) => sum + (Number(val) || 0), 0);
+            
+            meta.data.forEach((bar, index) => {
+                const val = dataset.data[index];
+                if (val === undefined || val === null) return;
+                
+                const left = bar.x - bar.width / 2;
+                const right = bar.x + bar.width / 2;
+                const top = bar.y;
+                const bottom = bar.base;
+                const width = bar.width;
+                const middle = bar.x;
+                
+                const color = colors[index % colors.length];
+                
+                // Parámetros de la elipse (tapa y base del cilindro)
+                const rx = width / 2;
+                const ry = Math.min(width * 0.2, 10);
+                
+                // Degradado horizontal suave para simular la superficie curva del cilindro
+                const bodyGrad = ctx.createLinearGradient(left, 0, right, 0);
+                bodyGrad.addColorStop(0, color.left);           // Color base iluminado
+                bodyGrad.addColorStop(0.35, color.top);         // Reflejo de luz (brillo vertical)
+                bodyGrad.addColorStop(0.7, color.left);         // Retorno al color base
+                bodyGrad.addColorStop(1, color.right);          // Sombra en el borde derecho
+                
+                // 1. Dibujar el Cuerpo del Cilindro (Conexión vertical con bases curvas)
+                ctx.fillStyle = bodyGrad;
+                ctx.beginPath();
+                ctx.moveTo(left, top);
+                ctx.lineTo(left, bottom);
+                ctx.ellipse(middle, bottom, rx, ry, 0, Math.PI, 0, true); // Curva de la base inferior
+                ctx.lineTo(right, top);
+                ctx.ellipse(middle, top, rx, ry, 0, 0, Math.PI, false);  // Curva de la base superior (parte frontal)
+                ctx.closePath();
+                ctx.fill();
+                
+                // 2. Dibujar la Tapa Superior del Cilindro (Elipse completa)
+                ctx.fillStyle = color.top;
+                ctx.beginPath();
+                ctx.ellipse(middle, top, rx, ry, 0, 0, 2 * Math.PI);
+                ctx.closePath();
+                ctx.fill();
+                
+                // 3. Efecto de brillo en hover interactivo
+                const activeElements = chart.getActiveElements();
+                const isHovered = activeElements.some(e => e.datasetIndex === datasetIdx && e.index === index);
+                if (isHovered) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+                    
+                    // Cuerpo
+                    ctx.beginPath();
+                    ctx.moveTo(left, top);
+                    ctx.lineTo(left, bottom);
+                    ctx.ellipse(middle, bottom, rx, ry, 0, Math.PI, 0, true);
+                    ctx.lineTo(right, top);
+                    ctx.ellipse(middle, top, rx, ry, 0, 0, Math.PI, false);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Tapa superior
+                    ctx.beginPath();
+                    ctx.ellipse(middle, top, rx, ry, 0, 0, 2 * Math.PI);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+                
+                // 4. Mostrar etiquetas de valor y porcentaje si está habilitado
+                if (drawPercentages && val > 0) {
+                    const percent = totalVal > 0 ? ((val / totalVal) * 100).toFixed(1) + '%' : '0%';
+                    ctx.fillStyle = document.documentElement.getAttribute('data-theme') === 'dark' ? '#f8fafc' : '#1a2744';
+                    ctx.font = 'bold 11px Barlow, sans-serif';
+                    ctx.textAlign = 'center';
+                    // Ubicado arriba del punto más alto de la elipse superior (top - ry)
+                    ctx.fillText(`${val} (${percent})`, middle, top - ry - 8);
+                }
+            });
+        });
+        ctx.restore();
+    }
+};
+
 function drawDashCharts() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#223766' : '#eef2f8';
+    const chartBorderColor = isDark ? '#101c38' : '#ffffff';
+    Chart.defaults.color = isDark ? '#94a3b8' : '#6b7a99';
+
+    const style = getComputedStyle(document.documentElement);
+    const activeNavy = style.getPropertyValue('--navy').trim() || '#002d5e';
+    const activeGold = style.getPropertyValue('--gold').trim() || '#c8922a';
+    const activeNavyLight = style.getPropertyValue('--navy-light').trim() || '#1a4a8a';
+    const activeGoldLight = style.getPropertyValue('--gold-light').trim() || '#e8b04a';
+    const activeGreen = style.getPropertyValue('--green').trim() || '#1a7a4a';
+    const activeRed = style.getPropertyValue('--red').trim() || '#c0392b';
+    const activePalette = [activeNavy, activeNavyLight, activeGold, activeGoldLight, activeGreen, activeRed];
+
     // Monthly attendance
     const monthCounts = MONTHS.map(m => atencionData.filter(r => getMes(r.fecha) === m).length);
     new Chart(document.getElementById('chart-monthly'), {
         type: 'bar',
         data: {
             labels: MONTHS.map(m => m.slice(0, 3)),
-            datasets: [{ label: 'Atendidos', data: monthCounts, backgroundColor: NAVY, borderRadius: 6 }]
+            datasets: [{ 
+                label: 'Atendidos', 
+                data: monthCounts, 
+                backgroundColor: 'rgba(0,0,0,0)', 
+                borderColor: 'rgba(0,0,0,0)' 
+            }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#eef2f8' } }, x: { grid: { display: false } } } }
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        labelColor: function(context) {
+                            return {
+                                borderColor: '#1a4a8a',
+                                backgroundColor: '#4b7bec',
+                                borderWidth: 2
+                            };
+                        }
+                    }
+                },
+                bar3DPlugin: {
+                    colors: [
+                        { left: '#4b7bec', right: '#1a4a8a', top: '#82b1ff' } // Azul Rey
+                    ],
+                    drawPercentages: false
+                }
+            }, 
+            scales: { 
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: gridColor } 
+                }, 
+                x: { 
+                    grid: { display: false } 
+                } 
+            } 
+        },
+        plugins: [bar3DPlugin]
     });
 
     // Services pie
@@ -235,7 +413,16 @@ function drawDashCharts() {
     const servCounts = servKeys.map(k => atencionData.filter(r => r.servicio === k).length);
     new Chart(document.getElementById('chart-services'), {
         type: 'doughnut',
-        data: { labels: servLabels, datasets: [{ data: servCounts, backgroundColor: PALETTE, borderWidth: 2 }] },
+        data: { 
+            labels: servLabels, 
+            datasets: [{ 
+                data: servCounts, 
+                backgroundColor: activePalette, 
+                borderWidth: 2.5,
+                borderColor: chartBorderColor,
+                hoverOffset: 12
+            }] 
+        },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 12 } } } } }
     });
 
@@ -244,38 +431,75 @@ function drawDashCharts() {
     const gF = pensionadosData.filter(r => r.genero === 'F').length;
     new Chart(document.getElementById('chart-gender'), {
         type: 'pie',
-        data: { labels: ['Masculino', 'Femenino'], datasets: [{ data: [gM, gF], backgroundColor: [NAVY, '#be185d'], borderWidth: 2 }] },
+        data: { 
+            labels: ['Masculino', 'Femenino'], 
+            datasets: [{ 
+                data: [gM, gF], 
+                backgroundColor: [activeNavy, '#be185d'], 
+                borderWidth: 2.5,
+                borderColor: chartBorderColor,
+                hoverOffset: 12
+            }] 
+        },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
     });
 
-    // Pension type
-     const ptypes = {};
+    // Pension type (ordenados de mayor a menor porcentaje)
+    const ptypes = {};
     pensionadosData.forEach(r => { const k = r.tipoPension || 'Sin datos'; ptypes[k] = (ptypes[k] || 0) + 1; });
-    const ptLabels = Object.keys(ptypes), ptVals = Object.values(ptypes);
+    const sortedPtypes = Object.entries(ptypes)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value);
+    const ptLabels = sortedPtypes.map(item => item.label);
+    const ptVals = sortedPtypes.map(item => item.value);
     
     new Chart(document.getElementById('chart-pension'), {
         type: 'bar',
         data: {
             labels: ptLabels,
-            datasets: [{ label: 'Pensionados', data: ptVals, backgroundColor: GOLD, borderRadius: 6 }]
+            datasets: [{ 
+                label: 'Pensionados', 
+                data: ptVals, 
+                backgroundColor: 'rgba(0,0,0,0)', 
+                borderColor: 'rgba(0,0,0,0)' 
+            }]
         },
         options: { 
             responsive: true, 
             maintainAspectRatio: false, 
             plugins: { 
-                legend: { display: false } 
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        labelColor: function(context) {
+                            return {
+                                borderColor: '#c8922a',
+                                backgroundColor: '#ffaa44',
+                                borderWidth: 2
+                            };
+                        }
+                    }
+                },
+                bar3DPlugin: {
+                    colors: [
+                        { left: '#ffaa44', right: '#c8922a', top: '#ffe099' } // Dorado/Naranja
+                    ],
+                    drawPercentages: true
+                }
             }, 
             scales: { 
                 y: { 
                     beginAtZero: true, 
-                    grid: { color: '#eef2f8' } 
+                    grid: { color: gridColor },
+                    grace: '15%' // Añadir margen superior automático del 15% para que las etiquetas no se corten
                 }, 
                 x: { 
                     grid: { display: false }, 
                     ticks: { maxRotation: 30 } 
                 } 
             } 
-        }
+        },
+        plugins: [bar3DPlugin]
     });
 }
 
@@ -452,6 +676,8 @@ async function saveAtencion() {
     const rif = rifNumero ? `${rifLetra}-${rifNumero}` : '';
     if (!fecha || !servicio || !nombre || !cedula) { toast('Complete los campos obligatorios (*)', 'error'); return; }
 
+
+
     isSavingAten = true;
     try {
         if (editAtenId) {
@@ -487,12 +713,38 @@ async function deleteAtencion(id) {
 
 //  PENSIONADOS
 function togglePatolFields(show) {
-    document.getElementById('pf-patol-tipo-group').style.opacity = show ? '1' : '.4';
-    document.getElementById('pf-tratam-group').style.opacity = show ? '1' : '.4';
+    const group1 = document.getElementById('pf-patol-tipo-group');
+    const group2 = document.getElementById('pf-tratam-group');
+    if (group1) {
+        group1.style.opacity = show ? '1' : '.4';
+        const input1 = group1.querySelector('input');
+        if (input1) {
+            input1.disabled = !show;
+            input1.style.cursor = show ? '' : 'not-allowed';
+            if (!show) input1.value = '';
+        }
+    }
+    if (group2) {
+        group2.style.opacity = show ? '1' : '.4';
+        const input2 = group2.querySelector('input');
+        if (input2) {
+            input2.disabled = !show;
+            input2.style.cursor = show ? '' : 'not-allowed';
+            if (!show) input2.value = '';
+        }
+    }
 }
 function toggleMedsField(show) {
     const g = document.getElementById('pf-meds-tipo-group');
-    if (g) g.style.opacity = show ? '1' : '.4';
+    if (g) {
+        g.style.opacity = show ? '1' : '.4';
+        const input = g.querySelector('input');
+        if (input) {
+            input.disabled = !show;
+            input.style.cursor = show ? '' : 'not-allowed';
+            if (!show) input.value = '';
+        }
+    }
 }
 
 function initPensionados() {
@@ -561,8 +813,8 @@ function openPensionadoModal(id = null) {
     document.getElementById('modal-pens-title').textContent = id ? 'Editar Pensionado' : 'Registrar Pensionado';
     // reset 
     ['pf-nombre', 'pf-cedula', 'pf-analista', 'pf-estado', 'pf-municipio', 'pf-parroquia', 'pf-direccion',
-        'pf-centro-votacion', 'pf-tipo-pension', 'pf-banco', 'pf-consejo', 'pf-patol-tipo', 'pf-tratamiento',
-        'pf-meds-tipo', 'pf-club', 'pf-num-solic', 'pf-tipo-solic'].forEach(id => {
+        'pf-centro-votacion', 'pf-tipo-pension', 'pf-banco', 'pf-consejo', 'pf-vocero-salud', 'pf-patol-tipo', 'pf-tratamiento',
+        'pf-meds-tipo', 'pf-num-solic', 'pf-tipo-solic'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.value = id === 'pf-estado' ? 'ZULIA' : id === 'pf-municipio' ? 'CABIMAS' : '';
         });
@@ -577,10 +829,10 @@ function openPensionadoModal(id = null) {
     } else {
         document.getElementById('pf-fecha').value = new Date().toLocaleDateString('sv-SE');
     }
-      document.getElementById('pf-nacionalidad').value = 'V';
+    document.getElementById('pf-nacionalidad').value = 'V';
 
     setPhoneFields('pf-prefijo', 'pf-telefono', ''); 
-    document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
+    
     if (id) {
         const r = pensionadosData.find(x => x.id === id);
         document.getElementById('pf-nacionalidad').value = r.nacionalidad || 'V';
@@ -590,7 +842,6 @@ function openPensionadoModal(id = null) {
         if (r.fechaNac) calcEdad();
         else document.getElementById('pf-edad').value = r.edad || '';
         document.getElementById('pf-genero').value = r.genero || '';
-        // Cargar el teléfono separando el prefijo y los dígitos
         setPhoneFields('pf-prefijo', 'pf-telefono', r.telefono);
         document.getElementById('pf-mes').value = r.mes || '';
         document.getElementById('pf-analista').value = r.analista || '';
@@ -602,18 +853,38 @@ function openPensionadoModal(id = null) {
         document.getElementById('pf-tipo-pension').value = r.tipoPension || '';
         document.getElementById('pf-banco').value = r.banco || '';
         document.getElementById('pf-consejo').value = r.consejo || '';
+        document.getElementById('pf-vocero-salud').value = r.voceroSalud || '';
         document.getElementById('pf-patol-tipo').value = r.tipoPatologia || '';
         document.getElementById('pf-tratamiento').value = r.tratamiento || '';
         document.getElementById('pf-meds-tipo').value = r.tipoMeds || '';
-        document.getElementById('pf-club').value = r.club || '';
         document.getElementById('pf-num-solic').value = r.numSolicitud || '';
         document.getElementById('pf-tipo-solic').value = r.tipoSolicitud || '';
+        
         // radio buttons
-        const setRadio = (name, val) => { if (val) { const el = document.querySelector(`[name="${name}"][value="${val}"]`); if (el) el.checked = true; } };
-        setRadio('pf-cne', r.cne); setRadio('pf-ivss', r.esIvss); setRadio('pf-alim', r.alimentos);
-        toggleCentroVotacion(r.cne === 'SI');
-        setRadio('pf-inass', r.inass); setRadio('pf-patol', r.tienePatol);
-        setRadio('pf-meds', r.tieneMeds); setRadio('pf-venapp', r.venapp); setRadio('pf-solic-esp', r.solicEsp);
+        setRadio('pf-cne', r.cne);
+        setRadio('pf-ivss', r.esIvss);
+        setRadio('pf-alim', r.alimentos);
+        setRadio('pf-inass', r.inass);
+        setRadio('pf-patol', r.tienePatol);
+        setRadio('pf-meds', r.tieneMeds);
+        setRadio('pf-club', r.club);
+        setRadio('pf-venapp', r.venapp);
+        setRadio('pf-solic-esp', r.solicEsp);
+
+        toggleCentroVotacion(r.cne !== 'NO');
+        togglePatolFields(r.tienePatol !== 'NO');
+        toggleMedsField(r.tieneMeds !== 'NO');
+        toggleVenAppField(r.venapp !== 'NO');
+        toggleSolicEspField(r.solicEsp !== 'NO');
+    } else {
+        // Para registros nuevos, todos los radios desmarcados por defecto
+        document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-club"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
+        
+        toggleCentroVotacion(true);
+        togglePatolFields(true);
+        toggleMedsField(true);
+        toggleVenAppField(true);
+        toggleSolicEspField(true);
     }
     document.getElementById('modal-pensionado').classList.remove('hidden');
 }
@@ -673,18 +944,24 @@ function lookupCedulaPens() {
         document.getElementById('pf-patol-tipo').value = match.tipoPatologia || '';
         document.getElementById('pf-tratamiento').value = match.tratamiento || '';
         document.getElementById('pf-meds-tipo').value = match.tipoMeds || '';
-        document.getElementById('pf-club').value = match.club || '';
         document.getElementById('pf-num-solic').value = match.numSolicitud || '';
         document.getElementById('pf-tipo-solic').value = match.tipoSolicitud || '';
 
-        const setRadio = (name, val) => { if (val) { const el = document.querySelector(`[name="${name}"][value="${val}"]`); if (el) el.checked = true; } };
-        setRadio('pf-cne', match.cne); setRadio('pf-ivss', match.esIvss); setRadio('pf-alim', match.alimentos);
-        toggleCentroVotacion(match.cne === 'SI');
-        setRadio('pf-inass', match.inass); setRadio('pf-patol', match.tienePatol);
-        togglePatolFields(match.tienePatol === 'SI');
+        setRadio('pf-cne', match.cne);
+        setRadio('pf-ivss', match.esIvss);
+        setRadio('pf-alim', match.alimentos);
+        setRadio('pf-inass', match.inass);
+        setRadio('pf-patol', match.tienePatol);
         setRadio('pf-meds', match.tieneMeds);
-        toggleMedsField(match.tieneMeds === 'SI');
-        setRadio('pf-venapp', match.venapp); setRadio('pf-solic-esp', match.solicEsp);
+        setRadio('pf-club', match.club);
+        setRadio('pf-venapp', match.venapp);
+        setRadio('pf-solic-esp', match.solicEsp);
+
+        toggleCentroVotacion(match.cne !== 'NO');
+        togglePatolFields(match.tienePatol !== 'NO');
+        toggleMedsField(match.tieneMeds !== 'NO');
+        toggleVenAppField(match.venapp !== 'NO');
+        toggleSolicEspField(match.solicEsp !== 'NO');
 
         if (status) {
             status.textContent = '✓ Ciudadano registrado — datos pre-cargados';
@@ -692,6 +969,16 @@ function lookupCedulaPens() {
         }
     } else {
         document.getElementById('pf-nombre').value = '';
+        
+        // Para registros nuevos, todos los radios desmarcados por defecto
+        document.querySelectorAll('[name="pf-cne"],[name="pf-ivss"],[name="pf-alim"],[name="pf-inass"],[name="pf-patol"],[name="pf-meds"],[name="pf-club"],[name="pf-venapp"],[name="pf-solic-esp"]').forEach(r => r.checked = false);
+        
+        toggleCentroVotacion(true);
+        togglePatolFields(true);
+        toggleMedsField(true);
+        toggleVenAppField(true);
+        toggleSolicEspField(true);
+
         if (status) {
             status.textContent = '• Ciudadano nuevo — complete los datos';
             status.style.color = 'var(--text-secondary, #6b7a99)';
@@ -711,7 +998,10 @@ async function savePensionado() {
     const nacionalidad = document.getElementById('pf-nacionalidad').value;
     const mes = document.getElementById('pf-mes').value;
     const fecha = document.getElementById('pf-fecha').value;
-    if (!nombre || !cedula || !mes || !fecha) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+    const analista = document.getElementById('pf-analista').value.trim();
+    if (!nombre || !cedula || !mes || !fecha || !analista) { toast('Complete los campos obligatorios (*)', 'error'); return; }
+
+
     const pfPrefijo = document.getElementById('pf-prefijo').value;
     const pfTelCuerpo = document.getElementById('pf-telefono').value.trim();
     const pfTelefono = pfTelCuerpo ? (pfPrefijo + pfTelCuerpo) : '';
@@ -737,12 +1027,13 @@ async function savePensionado() {
         alimentos: getRadio('pf-alim'),
         inass: getRadio('pf-inass'),
         consejo: document.getElementById('pf-consejo').value,
+        voceroSalud: document.getElementById('pf-vocero-salud').value.trim(),
         tienePatol: getRadio('pf-patol'),
         tipoPatologia: document.getElementById('pf-patol-tipo').value,
         tratamiento: document.getElementById('pf-tratamiento').value,
         tieneMeds: getRadio('pf-meds'),
         tipoMeds: document.getElementById('pf-meds-tipo').value,
-        club: document.getElementById('pf-club').value,
+        club: getRadio('pf-club'),
         venapp: getRadio('pf-venapp'),
         numSolicitud: document.getElementById('pf-num-solic').value,
         solicEsp: getRadio('pf-solic-esp'),
@@ -755,7 +1046,7 @@ async function savePensionado() {
             await fsUpdatePens(editPensId, data);
             toast('Pensionado actualizado ✓');
         } else {
-            await fsAddPens({ oficina: 'OA CABIMAS', fechaRegistro: new Date().toISOString().split('T')[0], ...data });
+            await fsAddPens({ oficina: 'OA CABIMAS', fechaRegistro: getLocalDateStr(), ...data });
             toast('Pensionado registrado ✓');
         }
         // Sincronizar datos personales con el resto de registros en segundo plano (sin await)
@@ -818,6 +1109,7 @@ function viewPensionado(id) {
       ${field('Recibe Beneficio Alimentación', r.alimentos)}
       ${field('INASS o IVSS', r.inass)}
       ${field('Consejo Comunal', r.consejo)}
+      ${field('Vocero de Salud del Consejo Comunal al que Pertenece', r.voceroSalud)}
       ${field('Padece Patología', r.tienePatol)}
       ${field('Tipo de Patología', r.tipoPatologia)}
       ${field('Tratamiento Crónico', r.tratamiento)}
@@ -848,7 +1140,6 @@ function renderReportes() {
         const card = document.createElement('div');
         card.className = 'month-card';
         
-        // Hacemos que tenga estilo de botón clicable y ejecute el modal
         card.style.cursor = 'pointer';
         card.onclick = () => abrirModalReporteMensual(new Date().getFullYear(), i);
         
@@ -978,18 +1269,32 @@ function cargarPensionadosPorDia(dia) {
 }
 
 function drawReporteCharts() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDark ? '#223766' : '#eef2f8';
+    Chart.defaults.color = isDark ? '#94a3b8' : '#6b7a99';
+
+    const style = getComputedStyle(document.documentElement);
+    const activeGold = style.getPropertyValue('--gold').trim() || '#c8922a';
+    const activeGoldPale = style.getPropertyValue('--gold-pale').trim() || '#fef3dd';
+    const activeNavy = style.getPropertyValue('--navy').trim() || '#002d5e';
+    const activeNavyLight = style.getPropertyValue('--navy-light').trim() || '#1a4a8a';
+    const activeGoldLight = style.getPropertyValue('--gold-light').trim() || '#e8b04a';
+    const activeGreen = style.getPropertyValue('--green').trim() || '#1a7a4a';
+    const activeRed = style.getPropertyValue('--red').trim() || '#c0392b';
+    const activePalette = [activeNavy, activeNavyLight, activeGold, activeGoldLight, activeGreen, activeRed];
+
     const servKeys = ['AFILIACION', 'PRESTACIONES', 'RECAUDACION_COBRANZA', 'ATENCION_CESANTE', 'FISCALIZACION', 'OTRAS_ATENCIONES'];
     const servLabels = ['Afiliación', 'Prestaciones', 'Recaud.', 'At. Cesante', 'Fiscalización', 'Otras'];
     const datasets = servKeys.map((k, i) => ({
         label: servLabels[i],
         data: MONTHS.map(m => atencionData.filter(r => getMes(r.fecha) === m && r.servicio === k).length),
-        backgroundColor: PALETTE[i], borderRadius: 3, stack: 'stack'
+        backgroundColor: activePalette[i], borderRadius: 3, stack: 'stack'
     }));
 
     new Chart(document.getElementById('rep-chart-stacked'), {
         type: 'bar',
         data: { labels: MONTHS.map(m => m.slice(0, 3)), datasets },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eef2f8' } } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: gridColor } } } }
     });
 
     const pensCounts = MONTHS.map(m => pensionadosData.filter(r => r.mes === m).length);
@@ -997,9 +1302,9 @@ function drawReporteCharts() {
         type: 'line',
         data: {
             labels: MONTHS.map(m => m.slice(0, 3)),
-            datasets: [{ label: 'Pensionados', data: pensCounts, borderColor: GOLD, backgroundColor: '#fef3dd', fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: GOLD }]
+            datasets: [{ label: 'Pensionados', data: pensCounts, borderColor: activeGold, backgroundColor: activeGoldPale, fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: activeGold }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#eef2f8' } } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: gridColor } } } }
     });
 }
 
@@ -1008,7 +1313,36 @@ function toggleCentroVotacion(enabled) {
     const el = document.getElementById('pf-centro-votacion');
     if (!el) return;
     el.disabled = !enabled;
-    el.style.opacity = enabled ? '1' : '.45';
+    const parent = el.closest('.form-group');
+    if (parent) {
+        parent.style.opacity = enabled ? '1' : '.4';
+    }
+    el.style.cursor = enabled ? '' : 'not-allowed';
+    if (!enabled) el.value = '';
+}
+
+// ── VENAPP TOGGLE
+function toggleVenAppField(enabled) {
+    const el = document.getElementById('pf-num-solic');
+    if (!el) return;
+    el.disabled = !enabled;
+    const parent = el.closest('.form-group');
+    if (parent) {
+        parent.style.opacity = enabled ? '1' : '.4';
+    }
+    el.style.cursor = enabled ? '' : 'not-allowed';
+    if (!enabled) el.value = '';
+}
+
+// ── SOLICITUD ESPECIAL TOGGLE
+function toggleSolicEspField(enabled) {
+    const el = document.getElementById('pf-tipo-solic');
+    if (!el) return;
+    el.disabled = !enabled;
+    const parent = el.closest('.form-group');
+    if (parent) {
+        parent.style.opacity = enabled ? '1' : '.4';
+    }
     el.style.cursor = enabled ? '' : 'not-allowed';
     if (!enabled) el.value = '';
 }
@@ -1043,15 +1377,41 @@ function customConfirm({ title = '¿Estás seguro?', msg = 'Esta acción no se p
 // ── INIT: gestionado por auth.onAuthStateChanged en firebase-ops.js
 
 // ── EXCEL EXPORTS (ExcelJS) ─────────────────────────
-function styleWorksheet(worksheet) {
+function styleWorksheet(worksheet, headerRowNumber = 1) {
     // Style Header Row
-    const headerRow = worksheet.getRow(1);
+    const headerRow = worksheet.getRow(headerRowNumber);
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1a7a4a' } }; // IVSS Green
     headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-    // Add Borders and alternating colors
+    // Aplicar fondo rojo solo a las celdas de las columnas activas
+    const colCount = worksheet.columns.length;
+    for (let col = 1; col <= colCount; col++) {
+    const cell = headerRow.getCell(col);
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } }; 
+}
+
+    // Ajustar el ancho de las columnas automáticamente según su contenido (más compacto y adaptado)
+    worksheet.columns.forEach(column => {
+        let maxLen = 0;
+        column.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
+            if (rowNumber < headerRowNumber) return; // Ignorar filas por encima del encabezado (fila del título censo)
+            let val = '';
+            if (cell.value !== null && cell.value !== undefined) {
+                if (typeof cell.value === 'object') {
+                    val = cell.value.text || '';
+                } else {
+                    val = cell.value.toString();
+                }
+            }
+            if (val.length > maxLen) {
+                maxLen = val.length;
+            }
+        });
+        column.width = Math.max(maxLen + 2, 10);
+    });
+
     worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+        if (rowNumber < headerRowNumber) return; 
         row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
             cell.border = {
                 top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
@@ -1059,10 +1419,12 @@ function styleWorksheet(worksheet) {
                 bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
                 right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
             };
-            if (rowNumber > 1) {
+            if (rowNumber > headerRowNumber) {
                 cell.alignment = { vertical: 'middle' };
-                if (rowNumber % 2 === 0) {
+                if ((rowNumber - headerRowNumber) % 2 === 0) {
                     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+                } else {
+                    cell.fill = null;
                 }
             }
         });
@@ -1127,7 +1489,7 @@ async function exportPensionadosExcel() {
     let list = pensionadosData;
     if (dDesde || dHasta) {
         list = list.filter(r => {
-            const f = r.fecha || r.fechaRegistro; // Toma la fecha nueva, o la vieja como respaldo
+            const f = r.fecha || r.fechaRegistro; 
             if (!f) return true;
             if (dDesde && f < dDesde) return false;
             if (dHasta && f > dHasta) return false;
@@ -1151,41 +1513,57 @@ async function exportPensionadosExcel() {
 
     const headers = [
         { h: 'N°', k: 'n', w: 6 },
-        { h: 'Oficina', k: 'oficina', w: 20 },
-        { h: 'Nombres y Apellidos', k: 'nombre', w: 45 },
-        { h: 'Cédula', k: 'cedula', w: 15 },
+        { h: 'Oficina Administrativa', k: 'oficina', w: 25 },
+        { h: 'Nombre y Apellido', k: 'nombre', w: 45 },
+        { h: 'C.I.', k: 'cedula', w: 15 },
         { h: 'Edad', k: 'edad', w: 10 },
-        { h: 'Fecha Nacimiento', k: 'fechaNac', w: 18 },
-        { h: 'Género', k: 'genero', w: 12 },
-        { h: 'Teléfono', k: 'telefono', w: 20 },
+        { h: 'Fecha de Nacimiento', k: 'fechaNac', w: 18 },
+        { h: 'Genero', k: 'genero', w: 12 },
+        { h: 'Telefono', k: 'telefono', w: 20 },
         { h: 'Mes', k: 'mes', w: 15 },
-        { h: 'Analista', k: 'analista', w: 25 },
         { h: 'Estado', k: 'estado', w: 15 },
         { h: 'Municipio', k: 'municipio', w: 20 },
         { h: 'Parroquia', k: 'parroquia', w: 25 },
-        { h: 'Dirección', k: 'direccion', w: 50 },
-        { h: 'Inscrito CNE', k: 'cne', w: 15 },
-        { h: 'Centro Votación', k: 'centroVotacion', w: 40 },
-        { h: 'Pensionado IVSS', k: 'esIvss', w: 20 },
+        { h: 'Dirección Exacta', k: 'direccion', w: 50 },
+        { h: 'Inscrito en el CNE', k: 'cne', w: 18 },
+        { h: 'Centro de Votación', k: 'centroVotacion', w: 40 },
+        { h: 'Pensionado IVSS', k: 'esIvss', w: 18 },
         { h: 'Tipo de Pensión', k: 'tipoPension', w: 25 },
-        { h: 'Banco', k: 'banco', w: 30 },
-        { h: 'Recibe Alimentos', k: 'alimentos', w: 18 },
-        { h: 'Atención INASS', k: 'inass', w: 18 },
-        { h: 'Consejo Comunal', k: 'consejo', w: 35 },
-        { h: 'Posee Patología', k: 'tienePatol', w: 18 },
-        { h: 'Tipo Patología', k: 'tipoPatologia', w: 40 },
-        { h: 'Tratamiento', k: 'tratamiento', w: 40 },
-        { h: 'Solicita Meds', k: 'tieneMeds', w: 15 },
-        { h: 'Tipo Meds', k: 'tipoMeds', w: 40 },
-        { h: 'Pertenece Club', k: 'club', w: 40 },
-        { h: 'VenApp', k: 'venapp', w: 12 },
-        { h: 'N° Solicitud', k: 'numSolicitud', w: 20 },
+        { h: 'Banco donde cobra su Pensión', k: 'banco', w: 30 },
+        { h: 'Beneficio de Alimentación', k: 'alimentos', w: 25 },
+        { h: 'INASS o IVSS', k: 'inass', w: 18 },
+        { h: 'Nombre Consejo Comunal', k: 'consejo', w: 35 },
+        { h: 'Nombre del Vocero del Consejo Comunal', k: 'voceroSalud', w: 45 },
+        { h: 'Solicitud VenApp', k: 'venapp', w: 22 },
+        { h: 'Numero de Solicitud', k: 'numSolicitud', w: 20 },
         { h: 'Solicitud Especial', k: 'solicEsp', w: 20 },
-        { h: 'Tipo Solicitud', k: 'tipoSolicitud', w: 30 },
+        { h: 'Tipo de Solicitud', k: 'tipoSolicitud', w: 30 },
+        { h: 'Sufre de alguna Patología', k: 'tienePatol', w: 22 },
+        { h: 'Tipo de Patología', k: 'tipoPatologia', w: 40 },
+        { h: 'Tratamiento Crónico', k: 'tratamiento', w: 40 },
+        { h: 'Medicamentos', k: 'tieneMeds', w: 30 },
+        { h: 'Tipo de Medicamentos', k: 'tipoMeds', w: 40 },
+        { h: 'Club de Abuelos', k: 'club', w: 40 },
+        { h: 'Analista', k: 'analista', w: 25 },
         { h: 'Fecha', k: 'fecha', w: 18 }
     ];
 
-    worksheet.columns = headers.map(x => ({ header: x.h, key: x.k, width: x.w }));
+    worksheet.columns = headers.map(x => ({ key: x.k, width: x.w }));
+
+    // Fila 1: Título del reporte (celdas combinadas - columnas C-L)
+    worksheet.mergeCells(1, 3, 1, 12);
+    const titleCell = worksheet.getCell(1, 3);
+    titleCell.value = 'CENSO DE PENSIONADOS Y PENSIONADAS DE LA DIRECCION DE AFILIACION Y PRESTACIONES EN DINERO';
+    titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF1A2744' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+    worksheet.getRow(1).height = 35;
+
+    // Fila 2: Cabeceras de las columnas
+    const headerRow = worksheet.getRow(2);
+    headers.forEach((x, index) => {
+        headerRow.getCell(index + 1).value = x.h;
+    });
+    headerRow.height = 25;
 
     list.forEach((r, i) => {
         const rowData = {};
@@ -1204,7 +1582,7 @@ async function exportPensionadosExcel() {
         worksheet.addRow(rowData);
     });
 
-    styleWorksheet(worksheet);
+    styleWorksheet(worksheet, 2);
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `Reporte_Pensionados_${dDesde || 'Inicio'}_al_${dHasta || 'Fin'}.xlsx`);
@@ -1532,6 +1910,10 @@ function closeUsuarioModal() {
 }
 
 async function saveUsuario() {
+    if (currentUserRole !== 'admin') {
+        toast('Acceso denegado', 'error');
+        return;
+    }
     const username = document.getElementById('usu-username').value.trim();
     const password = document.getElementById('usu-password').value;
     
@@ -1572,6 +1954,10 @@ async function saveUsuario() {
 }
 
 async function deleteUsuario(username, oldPass) {
+    if (currentUserRole !== 'admin') {
+        toast('Acceso denegado', 'error');
+        return;
+    }
     const ok = await customConfirm({ title: '¿Eliminar Operador?', msg: 'Se eliminará la cuenta permanentemente.', okLabel: 'Sí, eliminar', okClass: 'btn-danger', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass: 'danger' });
     if (!ok) return;
     
@@ -1583,5 +1969,40 @@ async function deleteUsuario(username, oldPass) {
     } catch(e) {
         toast('Error al eliminar: ' + e.message, 'error');
         console.error(e);
+    }
+}
+
+// ── AJUSTES & TEMA OSCURO
+function initAjustesThemeToggle() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const checkbox = document.getElementById('theme-toggle-checkbox');
+    if (checkbox) {
+        checkbox.checked = isDark;
+    }
+    
+    // Si el usuario es administrador, mostrar la sección de usuarios y cargar su tabla
+    const userSection = document.getElementById('ajustes-usuarios-section');
+    if (userSection) {
+        if (currentUserRole === 'admin') {
+            userSection.style.display = 'block';
+            renderUsuariosTable();
+        } else {
+            userSection.remove();
+        }
+    }
+    
+    lucide.createIcons();
+}
+
+function toggleTheme(checkbox) {
+    if (checkbox.checked) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+    }
+    if (currentView === 'dashboard') {
+        renderDashboard();
     }
 }

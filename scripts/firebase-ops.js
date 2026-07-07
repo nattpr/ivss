@@ -56,8 +56,8 @@ async function handleLogin() {
     }
 }
 
+// Mostrar/Ocultar contraseña en el Login
 function inicializarEventosLogin() {
-    // 1. Mostrar/Ocultar contraseña con el botón del ojo
     const togglePassBtn = document.getElementById('login-toggle-pass');
     if (togglePassBtn) {
         togglePassBtn.addEventListener('click', function (e) {
@@ -79,15 +79,16 @@ function inicializarEventosLogin() {
         });
     }
 }
-// Inicialización segura del DOM
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inicializarEventosLogin);
 } else {
     inicializarEventosLogin();
 }
+
 async function handleLogout() {
     await auth.signOut();
 }
+
 // ── FIRESTORE LOAD ────────────────────────────────────
 async function loadAllData() {
     const [aSnap, pSnap] = await Promise.all([
@@ -108,8 +109,7 @@ async function loadAllData() {
 function getDailyStats() {
     const hoy = new Date().toLocaleDateString('sv-SE');
     const atencionesHoy = atencionData.filter(r => r.fecha === hoy).length;
-    // Compara el nuevo campo de fecha y la fecha de registro automática
-    const pensionadosHoy = pensionadosData.filter(r => (r.fecha === hoy || r.fechaRegistro === hoy)).length;
+    const pensionadosHoy = pensionadosData.filter(r => r.fecha === hoy).length;
     return {
         atencion: atencionesHoy,
         pensionados: pensionadosHoy,
@@ -165,7 +165,7 @@ async function fsSyncCiudadano(cedula, dataToSync) {
     const batch = db.batch();
     let hasUpdates = false;
 
-     const cleanData = {};
+    const cleanData = {};
     const allowedKeys = ['nombre', 'fechaNac', 'edad', 'genero', 'telefono', 'nacionalidad'];
     
     allowedKeys.forEach(key => {
@@ -182,28 +182,16 @@ async function fsSyncCiudadano(cedula, dataToSync) {
         return false;
     };
 
-    // Update in Atencion
-    const atenMatches = atencionData.filter(r => r.cedula === cedula);
-    atenMatches.forEach(r => {
-        const atenData = {};
-        if (cleanData.nombre !== undefined) atenData.nombre = cleanData.nombre;
-        if (cleanData.telefono !== undefined) atenData.telefono = cleanData.telefono;
-
-        if (Object.keys(atenData).length > 0 && needsUpdate(r, atenData)) {
-            batch.update(db.collection('atencion').doc(r.id), atenData);
-            Object.assign(r, atenData); // Update memory
-            hasUpdates = true;
-        }
+    const atenDocs = await db.collection('atencion').where('cedula', '==', cedula).get();
+    atenDocs.forEach(doc => {
+        batch.update(doc.ref, cleanData);
+        hasUpdates = true;
     });
 
-    // Update in Pensionados
-    const pensMatches = pensionadosData.filter(r => r.cedula === cedula);
-    pensMatches.forEach(r => {
-        if (needsUpdate(r, cleanData)) {
-            batch.update(db.collection('pensionados').doc(r.id), cleanData);
-            Object.assign(r, cleanData); // Update memory
-            hasUpdates = true;
-        }
+    const penDocs = await db.collection('pensionados').where('cedula', '==', cedula).get();
+    penDocs.forEach(doc => {
+        batch.update(doc.ref, cleanData);
+        hasUpdates = true;
     });
 
     if (hasUpdates) {
@@ -212,7 +200,6 @@ async function fsSyncCiudadano(cedula, dataToSync) {
 }
 
 // ── AUTH STATE LISTENER (app boot) ────────────────────
-// Ocultar login de inmediato; Firebase restaurará sesión si existe (no flash en recarga)
 document.getElementById('login-screen').style.display = 'none';
 
 let currentUserRole = 'operador'; // default role
@@ -220,6 +207,7 @@ let currentUserRole = 'operador'; // default role
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         setLoginLoading(true);
+        currentUserRole = 'operador'; // Reset por defecto para evitar fugas de rol previo
         try {
             // Fetch user role
             const userDoc = await db.collection('usuarios').doc(user.email).get();
@@ -230,37 +218,43 @@ auth.onAuthStateChanged(async (user) => {
                 if (user.email === 'admin@ivss.gob.ve') {
                     currentUserRole = 'admin';
                     await db.collection('usuarios').doc(user.email).set({
-                        email: user.email,
                         username: 'admin',
+                        email: 'admin@ivss.gob.ve',
                         role: 'admin',
                         timestamp: Date.now()
                     });
-                } else {
-                    currentUserRole = 'operador';
                 }
             }
+        } catch (e) {
+            console.warn('Error cargando rol de Firestore, usando operador:', e);
+            currentUserRole = 'operador';
+        }
 
-            // Aplicar restricciones de UI según el rol
-            applyRoleRestrictions();
+        // Aplicar restricciones de UI según el rol (siempre se ejecuta fuera del try/catch de Firestore)
+        applyRoleRestrictions();
 
+        try {
             await loadAllData();
         } catch (e) {
-            console.error('Error cargando datos de Firestore:', e);
-            toast('Error al cargar datos. Verifique la conexión.', 'error');
+            console.error('Error cargando datos de colecciones:', e);
         }
         hideLoginScreen();
         setLoginLoading(false);
 
         // Show user chip in topbar
-         const activeName = user.displayName || user.email.split('@')[0];
+        const activeName = user.displayName || user.email.split('@')[0];
         const display = activeName.charAt(0).toUpperCase() + activeName.slice(1);
         document.getElementById('user-display-name').textContent = display;
         document.getElementById('user-avatar').textContent = activeName.charAt(0).toUpperCase();
         updateDate();
         navigate('dashboard');
     } else {
-        // Sin sesión activa → mostrar login
-        document.getElementById('login-screen').style.display = 'flex';
+        // Sin sesión activa → limpiar rol, aplicar restricciones y mostrar login con campos vacíos
+        currentUserRole = 'operador';
+        if (typeof applyRoleRestrictions === 'function') {
+            applyRoleRestrictions();
+        }
+        showLoginScreen();
         setLoginLoading(false);
     }
 });
@@ -271,11 +265,9 @@ async function fsUpdateAdminProfile(nuevoUser, nuevaPass) {
     if (!user) throw new Error("No hay usuario autenticado.");
     const emailOriginal = user.email;
     const nuevoEmail = nuevoUser + "@ivss.gob.ve";
-    // 1. Si cambió el nombre de usuario (email)
     if (nuevoEmail !== emailOriginal) {
         await user.updateEmail(nuevoEmail);
         
-        // Actualizar en Firestore la colección de usuarios (borrar el viejo y crear el nuevo)
         const oldDoc = await db.collection('usuarios').doc(emailOriginal).get();
         if (oldDoc.exists) {
             const data = oldDoc.data();
@@ -285,7 +277,6 @@ async function fsUpdateAdminProfile(nuevoUser, nuevaPass) {
             await db.collection('usuarios').doc(emailOriginal).delete();
         }
     }
-    // 2. Si se ingresó una nueva contraseña
     if (nuevaPass) {
         await user.updatePassword(nuevaPass);
     }
@@ -301,33 +292,26 @@ async function fsGetUsuarios() {
 async function fsCreateOperador(username, password) {
     const email = username + "@ivss.gob.ve";
     
-    // Crear usuario en Firestore para guardar su info y contraseña (para fines administrativos)
     await db.collection('usuarios').doc(email).set({
         username: username,
         email: email,
-        password: password, // Almacenado localmente para administración
+        password: password,
         role: 'operador',
         timestamp: Date.now()
     });
 
-    // Usar la instancia secundaria para crear el usuario en Auth sin perder la sesión actual
     await secondaryAuth.createUserWithEmailAndPassword(email, password);
-    await secondaryAuth.signOut(); // Limpiamos la sesión secundaria
+    await secondaryAuth.signOut();
 }
 
 async function fsUpdateOperadorPassword(username, oldPassword, newPassword) {
     const email = username + "@ivss.gob.ve";
     
-    // Para cambiar la contraseña de otro usuario sin Backend:
-    // 1. Iniciar sesión con la instancia secundaria usando su vieja clave
     await secondaryAuth.signInWithEmailAndPassword(email, oldPassword);
-    
-    // 2. Cambiar la contraseña
     const secUser = secondaryAuth.currentUser;
     await secUser.updatePassword(newPassword);
     await secondaryAuth.signOut();
 
-    // 3. Actualizar la nueva contraseña en Firestore
     await db.collection('usuarios').doc(email).update({
         password: newPassword
     });
@@ -336,7 +320,6 @@ async function fsUpdateOperadorPassword(username, oldPassword, newPassword) {
 async function fsDeleteOperador(username, oldPassword) {
     const email = username + "@ivss.gob.ve";
     
-    // 1. Iniciar sesión con instancia secundaria para eliminarlo de Auth
     try {
         await secondaryAuth.signInWithEmailAndPassword(email, oldPassword);
         const secUser = secondaryAuth.currentUser;
@@ -345,6 +328,7 @@ async function fsDeleteOperador(username, oldPassword) {
         console.warn("Usuario no encontrado en Auth o contraseña incorrecta, se procederá a borrar en BD", e);
     }
     
-    // 2. Borrar de Firestore
     await db.collection('usuarios').doc(email).delete();
 }
+
+
