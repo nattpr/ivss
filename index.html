@@ -738,7 +738,7 @@
                     <div class="form-group">
                         <label class="form-label">Edad</label>
                         <input class="form-input" type="number" id="pf-edad" placeholder="Calculada" readonly
-                            style="background:#f4f6f8;cursor:not-allowed">
+                            style="background: var(--bg); color: var(--text); border: 1px solid var(--border); cursor: not-allowed;">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Género *</label>
@@ -892,6 +892,10 @@
                         <label class="form-label">Nombre Consejo Comunal</label>
                         <input class="form-input" type="text" id="pf-consejo">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Vocero de Salud del Consejo Comunal</label>
+                        <input class="form-input" type="text" id="pf-vocero-salud" placeholder="Nombre del vocero">
+                    </div>
                 </div>
 
                 <!-- SALUD -->
@@ -934,7 +938,10 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">Club de Abuelos</label>
-                        <input class="form-input" type="text" id="pf-club">
+                        <div class="radio-group">
+                            <label class="radio-label"><input type="radio" name="pf-club" value="SI"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-club" value="NO"> No</label>
+                        </div>
                     </div>
                 </div>
 
