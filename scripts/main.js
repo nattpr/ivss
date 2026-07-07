@@ -795,7 +795,6 @@ function renderPensTable() {
         <td>${r.edad || '—'}</td>
         <td>${genTag(r.genero)}</td>
         <td>${r.tipoPension ? `<span class="tag tag-otras">${r.tipoPension}</span>` : '—'}</td>
-        <td>${r.banco || '—'}</td>
         <td><span class="badge">${r.mes}</span></td>
         <td>
           <button class="btn btn-outline btn-sm" onclick="viewPensionado('${r.id}')">Ver</button>

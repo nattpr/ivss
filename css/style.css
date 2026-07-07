@@ -1937,3 +1937,60 @@ td:nth-child(3) { /* Nombres y Apellidos */
 .theme-switch input:checked + .theme-slider .moon-icon {
     color: rgba(255, 255, 255, 0.2); /* Low visibility on blue background under the circle */
 }
+
+/* ── ESTILOS EXPORTACIÓN EXCEL ── */
+.btn-excel {
+    height: 36px;
+    border-color: #217346 !important;
+    color: #217346 !important;
+    font-weight: 600;
+}
+.btn-excel:hover {
+    background-color: #217346 !important;
+    color: #ffffff !important;
+}
+
+/* Modo oscuro: Verde brillante para que resalte y no se pierda */
+[data-theme="dark"] .btn-excel {
+    border-color: #4ade80 !important;
+    color: #4ade80 !important;
+}
+[data-theme="dark"] .btn-excel:hover {
+    background-color: #4ade80 !important;
+    color: #091124 !important;
+}
+
+/* ── MODIFICACIONES DEL RESUMEN ANUAL (HOVER Y ACTIVO) ── */
+/* Sombreado celeste premium idéntico en ambos ambientes (Modo Claro y Modo Oscuro) */
+.month-card:hover,
+.month-card.active {
+    border-color: #38bdf8 !important;
+    background-color: rgba(56, 189, 248, 0.20) !important; /* Celeste suave en todo el cuadro */
+    color: var(--text) !important;
+}
+
+/* Modo Claro: Color de textos al seleccionar/hover */
+.month-card:hover .month-count,
+.month-card.active .month-count {
+    color: var(--navy) !important;
+}
+.month-card:hover .month-name,
+.month-card.active .month-name {
+    color: var(--text-muted) !important;
+}
+
+/* Modo Oscuro: Textos de alto contraste y color del número en azul brillante */
+[data-theme="dark"] .month-card .month-name {
+    color: #ffffff !important;
+}
+[data-theme="dark"] .month-card .month-count {
+    color: #38bdf8 !important; /* Azul brillante */
+}
+[data-theme="dark"] .month-card:hover .month-name,
+[data-theme="dark"] .month-card.active .month-name {
+    color: #ffffff !important;
+}
+[data-theme="dark"] .month-card:hover .month-count,
+[data-theme="dark"] .month-card.active .month-count {
+    color: #38bdf8 !important;
+}
