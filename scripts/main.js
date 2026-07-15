@@ -558,7 +558,7 @@ function renderAtencionTable() {
         </td>
       </tr>`).join('');
     }
-    document.getElementById('aten-count').textContent = `${total} registro${total !== 1 ? 's' : ''}`;
+    document.getElementById('aten-count').textContent = `${total} ${total !== 1 ? 'atenciones' : 'atención'}`;
     renderPagination('aten', pages, atenPage, p => { atenPage = p; renderAtencionTable(); });
 }
 
@@ -803,7 +803,7 @@ function renderPensTable() {
         </td>
       </tr>`).join('');
     }
-    document.getElementById('pens-count').textContent = `${total} pensionado${total !== 1 ? 's' : ''}`;
+    document.getElementById('pens-count').textContent = `${total} ${total !== 1 ? 'atenciones' : 'atención'}`;
     renderPagination('pens', pages, pensPage, p => { pensPage = p; renderPensTable(); });
 }
 
@@ -1173,6 +1173,7 @@ function abrirModalReporteMensual(anio, mesIndex) {
   // Cambiar títulos dinámicamente usando las variables del sistema
   document.getElementById("modal-reporte-titulo").innerText = `Resumen de Pensionados - ${nombreMes} ${reporteAnioActivo}`;
   document.getElementById("detalles-dia-titulo").innerText = "Pensionados Atendidos: Seleccione un día";
+  document.getElementById("detalles-dia-total").innerText = "Total: Sin atención";
   
   // Tabla con mensaje inicial
   document.getElementById("tabla-cuerpo-pensionados-dia").innerHTML = `
@@ -1209,16 +1210,27 @@ function abrirModalReporteMensual(anio, mesIndex) {
 function cerrarModalReporteMensual() {
   document.getElementById("modal-reporte-mensual").style.display = "none";
 }
-// Helper para extraer el número de día de un string de fecha (soporta YYYY-MM-DD y DD/MM/YYYY)
+// Helper para extraer el número de día de una fecha (soporta YYYY-MM-DD, DD/MM/YYYY, Date y Timestamps)
 function getDiaDeFecha(fechaStr) {
   if (!fechaStr) return null;
-  if (fechaStr.includes('-')) {
-    const partes = fechaStr.split('-');
-    return partes[0].length === 4 ? parseInt(partes[2]) : parseInt(partes[0]);
+  if (typeof fechaStr.toDate === 'function') {
+    fechaStr = fechaStr.toDate();
   }
-  if (fechaStr.includes('/')) {
-    const partes = fechaStr.split('/');
-    return partes[0].length === 4 ? parseInt(partes[2]) : parseInt(partes[0]);
+  if (fechaStr instanceof Date) {
+    return fechaStr.getDate();
+  }
+  if (fechaStr.seconds !== undefined) {
+    return new Date(fechaStr.seconds * 1000).getDate();
+  }
+  if (typeof fechaStr === 'string') {
+    if (fechaStr.includes('-')) {
+      const partes = fechaStr.split('-');
+      return partes[0].length === 4 ? parseInt(partes[2]) : parseInt(partes[0]);
+    }
+    if (fechaStr.includes('/')) {
+      const partes = fechaStr.split('/');
+      return partes[0].length === 4 ? parseInt(partes[2]) : parseInt(partes[0]);
+    }
   }
   return null;
 }
@@ -1233,9 +1245,9 @@ function cargarPensionadosPorDia(dia) {
   
   document.getElementById("detalles-dia-titulo").innerText = `Pensionados Atendidos: ${fechaCompleta}`;
   
-  // Filtramos la data en memoria
+  // Filtramos la data en memoria con máxima seguridad en mayúsculas y espacios
   const filtrados = pensionadosData.filter(r => {
-    const coincideMes = r.mes === nombreMes;
+    const coincideMes = String(r.mes || '').trim().toUpperCase() === String(nombreMes || '').trim().toUpperCase();
     const diaRegistro = getDiaDeFecha(r.fecha || r.fechaRegistro);
     return coincideMes && diaRegistro === dia;
   });
@@ -1243,6 +1255,7 @@ function cargarPensionadosPorDia(dia) {
   tablaCuerpo.innerHTML = "";
   
   if (filtrados.length === 0) {
+    document.getElementById("detalles-dia-total").innerText = "Total: Sin atención";
     tablaCuerpo.innerHTML = `
       <tr>
         <td colspan="3" class="text-center-modal">No se registraron pensionados atendidos este día.</td>
@@ -1250,6 +1263,8 @@ function cargarPensionadosPorDia(dia) {
     `;
     return;
   }
+  
+  document.getElementById("detalles-dia-total").innerText = `Total: ${filtrados.length}`;
   
   // Renderizamos las filas de los pensionados atendidos ese día
   filtrados.forEach(r => {

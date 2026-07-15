@@ -8,11 +8,11 @@ const firebaseConfig = {
     appId: "1:283388928591:web:a0f85c41800d3812a9c03a"
 };
 
-// Instancia Principal
+
 firebase.initializeApp(firebaseConfig);
 const db   = firebase.firestore();
 
-// Activar la Persistencia y Caché Local de Firestore
+
 db.enablePersistence({ synchronizeTabs: true })
     .then(() => {
         console.log("Persistencia offline habilitada correctamente en Firestore (IndexedDB).");
@@ -27,9 +27,8 @@ db.enablePersistence({ synchronizeTabs: true })
 
 const auth = firebase.auth();
 
-// Instancia Secundaria (para gestión de usuarios sin perder sesión)
+// gestión secundaria de usuarios sin perder sesión
 const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = secondaryApp.auth();
 
-// Mantener sesión entre recargas; sólo cierra con signOut() manual
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);

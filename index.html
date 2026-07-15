@@ -603,7 +603,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Fecha *</label>
-                        <input class="form-input" type="date" id="af-fecha">
+                        <input class="form-input" type="date" id="af-fecha" readonly style="background: var(--bg); color: var(--text); border: 1px solid var(--border); cursor: not-allowed; pointer-events: none;">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Tipo de Servicio *</label>
@@ -626,7 +626,7 @@
                                 <option value="E">E</option>
                             </select>
                             <input class="form-input" type="text" id="af-cedula" placeholder="Ej: 7480674" minlength="7"
-                                maxlength="8" style="flex: 1;" onblur="lookupCedulaAten()"
+                                maxlength="8" style="flex: 1;" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onblur="lookupCedulaAten()"
                                 onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCedulaAten();}">
                         </div>
                         <span id="af-cedula-status"
@@ -709,7 +709,7 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label class="form-label">Fecha *</label>
-                        <input class="form-input" type="date" id="pf-fecha" required>
+                        <input class="form-input" type="date" id="pf-fecha" required readonly style="background: var(--bg); color: var(--text); border: 1px solid var(--border); cursor: not-allowed; pointer-events: none;">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Cédula de Identidad *</label>
@@ -720,7 +720,7 @@
                                 <option value="E">E</option>
                             </select>
                             <input class="form-input" type="text" id="pf-cedula" placeholder="Ej: 7480674" minlength="7"
-                                maxlength="8" style="flex: 1;" onblur="lookupCedulaPens()"
+                                maxlength="8" style="flex: 1;" oninput="this.value = this.value.replace(/[^0-9]/g, '')" onblur="lookupCedulaPens()"
                                 onkeydown="if(event.key==='Enter'){event.preventDefault();lookupCedulaPens();}">
                         </div>
                         <span id="pf-cedula-status"
@@ -1318,7 +1318,10 @@
             <div id="grid-dias-reporte" class="grid-dias"></div>
           </div>
           <div class="detalles-col">
-            <h4 id="detalles-dia-titulo">Pensionados Atendidos: Seleccione un día</h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h4 id="detalles-dia-titulo" style="margin: 0 !important;">Pensionados Atendidos: Seleccione un día</h4>
+              <span id="detalles-dia-total" style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted, #64748b);">Total: Sin atención</span>
+            </div>
             <div class="tabla-contenedor-modal">
               <table class="tabla-atencion-modal">
                 <thead>
