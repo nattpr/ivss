@@ -643,8 +643,8 @@
                                 <option value="">-</option>
                                 <option value="0412">0412</option>
                                 <option value="0414">0414</option>
-                                <option value="0424">0424</option>
                                 <option value="0416">0416</option>
+                                <option value="0424">0424</option>
                                 <option value="0426">0426</option>
                                 <option value="0422">0422</option>
                             </select>
@@ -959,8 +959,8 @@
                     <div class="form-group">
                         <label class="form-label">Solicitud VenApp 1x10</label>
                         <div class="radio-group">
-                            <label class="radio-label"><input type="radio" name="pf-venapp" value="SI"> Sí</label>
-                            <label class="radio-label"><input type="radio" name="pf-venapp" value="NO"> No</label>
+                            <label class="radio-label"><input type="radio" name="pf-venapp" value="SI" onclick="toggleVenAppField(true)"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-venapp" value="NO" onclick="toggleVenAppField(false)"> No</label>
                         </div>
                     </div>
                     <div class="form-group">
@@ -970,8 +970,8 @@
                     <div class="form-group">
                         <label class="form-label">Solicitud Especial</label>
                         <div class="radio-group">
-                            <label class="radio-label"><input type="radio" name="pf-solic-esp" value="SI"> Sí</label>
-                            <label class="radio-label"><input type="radio" name="pf-solic-esp" value="NO"> No</label>
+                            <label class="radio-label"><input type="radio" name="pf-solic-esp" value="SI" onclick="toggleSolicEspField(true)"> Sí</label>
+                            <label class="radio-label"><input type="radio" name="pf-solic-esp" value="NO" onclick="toggleSolicEspField(false)"> No</label>
                         </div>
                     </div>
                     <div class="form-group">

@@ -1404,11 +1404,11 @@ function styleWorksheet(worksheet, headerRowNumber = 1) {
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC0392B' } }; 
 }
 
-    // Ajustar el ancho de las columnas automáticamente según su contenido (más compacto y adaptado)
+    // para ajustar el ancho de las columnas en la hoja de excel
     worksheet.columns.forEach(column => {
         let maxLen = 0;
         column.eachCell({ includeEmpty: true }, (cell, rowNumber) => {
-            if (rowNumber < headerRowNumber) return; // Ignorar filas por encima del encabezado (fila del título censo)
+            if (rowNumber < headerRowNumber) return; // 
             let val = '';
             if (cell.value !== null && cell.value !== undefined) {
                 if (typeof cell.value === 'object') {
@@ -1467,16 +1467,34 @@ async function exportAtencionExcel() {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Atención");
 
-     worksheet.columns = [
-        { header: 'N°', key: 'n', width: 6 },
-        { header: 'Fecha', key: 'fecha', width: 15 },
-        { header: 'Servicio', key: 'servicio', width: 35 },
-        { header: 'Cédula', key: 'cedula', width: 15 },
-        { header: 'Nombres y Apellidos', key: 'nombre', width: 45 },
-        { header: 'Teléfono', key: 'telefono', width: 20 },
-        { header: 'Empresa', key: 'empresa', width: 30 },
-        { header: 'RIF', key: 'rif', width: 15 }
+    const headers = [
+        { h: 'N°', k: 'n', w: 6 },
+        { h: 'Fecha', k: 'fecha', w: 15 },
+        { h: 'Servicio', k: 'servicio', w: 35 },
+        { h: 'Cédula', k: 'cedula', w: 15 },
+        { h: 'Nombres y Apellidos', k: 'nombre', w: 45 },
+        { h: 'Teléfono', k: 'telefono', w: 20 },
+        { h: 'Empresa', k: 'empresa', w: 30 },
+        { h: 'RIF', k: 'rif', w: 15 }
     ];
+
+    worksheet.columns = headers.map(x => ({ key: x.k, width: x.w }));
+
+    // Fila 1: Título del reporte (celdas combinadas de A a H)
+    worksheet.mergeCells(1, 1, 1, 8);
+    const titleCell = worksheet.getCell(1, 1);
+    titleCell.value = 'OA CABIMAS ATENCION AL PUBLICO';
+    titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF1A2744' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 30;
+
+    // Fila 2: Cabeceras de las columnas
+    const headerRow = worksheet.getRow(2);
+    headers.forEach((x, index) => {
+        headerRow.getCell(index + 1).value = x.h;
+    });
+    headerRow.height = 25;
+
     list.forEach((r, i) => {
         worksheet.addRow({
             n: i + 1,
@@ -1490,7 +1508,7 @@ async function exportAtencionExcel() {
         });
     });
 
-    styleWorksheet(worksheet);
+    styleWorksheet(worksheet, 2);
 
     const buffer = await workbook.xlsx.writeBuffer();
     saveAs(new Blob([buffer]), `Reporte_Atencion_${dDesde || 'Inicio'}_al_${dHasta || 'Fin'}.xlsx`);

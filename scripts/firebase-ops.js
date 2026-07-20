@@ -259,7 +259,6 @@ auth.onAuthStateChanged(async (user) => {
     }
 });
 
-// Actualiza el usuario y contraseña del administrador en Firebase
 async function fsUpdateAdminProfile(nuevoUser, nuevaPass) {
     const user = auth.currentUser;
     if (!user) throw new Error("No hay usuario autenticado.");
