@@ -1994,3 +1994,128 @@ td:nth-child(3) { /* Nombres y Apellidos */
 [data-theme="dark"] .month-card.active .month-count {
     color: #38bdf8 !important;
 }
+
+/* Modo Oscuro: Titulos de las gráficas del Dashboard en Blanco */
+[data-theme="dark"] .chart-title {
+    color: #ffffff !important;
+}
+
+/* ── STYLED PIN MODAL ── */
+.pin-overlay {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 24, 51, 0.65) !important;
+}
+
+.pin-box {
+    border-radius: 24px !important;
+    padding: 36px 28px 28px !important;
+    border: 1px solid var(--border);
+    box-shadow: 0 25px 50px -12px rgba(0, 45, 94, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+    max-width: 400px !important;
+}
+
+.pin-icon-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(0, 45, 94, 0.1) 0%, rgba(56, 189, 248, 0.2) 100%);
+    border: 2px solid rgba(56, 189, 248, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 18px;
+    box-shadow: 0 10px 25px rgba(0, 45, 94, 0.18);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pin-icon-badge svg {
+    color: var(--navy);
+}
+
+[data-theme="dark"] .pin-icon-badge {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(56, 189, 248, 0.25) 100%);
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .pin-icon-badge svg {
+    stroke: #38bdf8;
+}
+
+.pin-input-field {
+    height: 52px !important;
+    width: 190px !important;
+    border-radius: 14px !important;
+    font-size: 26px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.55em !important;
+    text-align: center !important;
+    text-indent: 0.25em !important;
+    border: 2px solid var(--border) !important;
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    transition: all 0.25s ease !important;
+    margin: 0 auto !important;
+}
+
+.pin-input-field:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.2) !important;
+    outline: none !important;
+}
+
+.pin-error-text {
+    display: block;
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 8px;
+    min-height: 18px;
+}
+
+.pin-error-text.shake {
+    animation: pin-shake 0.3s ease;
+}
+
+@keyframes pin-shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+[data-theme="dark"] .pin-box .confirm-title {
+    color: #38bdf8 !important;
+}
+
+/* Icono del Calendario del Generador de Reportes (Negro en Modo Claro, Blanco en Modo Oscuro) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) !important;
+    cursor: pointer;
+}
+
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: brightness(0) invert(1) !important;
+}
+
+/* Tabla Resumen Mensual con destacado Azul Celeste */
+#rep-tbody tr strong {
+    color: #0284c7 !important;
+}
+
+[data-theme="dark"] #rep-tbody tr strong {
+    color: #38bdf8 !important;
+}
+
+/* Encabezado de Tabla Resumen Mensual · Atención al Público */
+#rep-table-wrap table thead th {
+    background-color: rgba(2, 132, 199, 0.25) !important;
+    color: #0f172a !important; /* Texto negro/oscuro en Modo Claro */
+    font-weight: 700 !important;
+}
+
+[data-theme="dark"] #rep-table-wrap table thead th {
+    background-color: #0369a1 !important; /* Celeste más oscuro del diseño */
+    color: #ffffff !important; /* Texto blanco en Modo Oscuro */
+    font-weight: 700 !important;
+}

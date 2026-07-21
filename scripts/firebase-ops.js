@@ -207,14 +207,13 @@ let currentUserRole = 'operador'; // default role
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         setLoginLoading(true);
-        currentUserRole = 'operador'; // Reset por defecto para evitar fugas de rol previo
+        currentUserRole = 'operador'; 
         try {
             // Fetch user role
             const userDoc = await db.collection('usuarios').doc(user.email).get();
             if (userDoc.exists) {
                 currentUserRole = userDoc.data().role || 'operador';
             } else {
-                // Si es el admin por defecto y no existe en Firestore, lo creamos
                 if (user.email === 'admin@ivss.gob.ve') {
                     currentUserRole = 'admin';
                     await db.collection('usuarios').doc(user.email).set({

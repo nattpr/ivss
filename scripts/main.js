@@ -35,6 +35,25 @@ function getMes(dateStr) {
     const months = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
     return months[new Date(dateStr + 'T00:00:00').getMonth()];
 }
+function getAnio(dateStr) {
+    if (!dateStr) return new Date().getFullYear();
+    if (typeof dateStr.toDate === 'function') dateStr = dateStr.toDate();
+    if (dateStr instanceof Date) return dateStr.getFullYear();
+    if (dateStr.seconds !== undefined) return new Date(dateStr.seconds * 1000).getFullYear();
+    if (typeof dateStr === 'string') {
+        if (dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts[0].length === 4) return parseInt(parts[0]);
+            if (parts[2].length === 4) return parseInt(parts[2]);
+        }
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts[0].length === 4) return parseInt(parts[0]);
+            if (parts[2].length === 4) return parseInt(parts[2]);
+        }
+    }
+    return new Date().getFullYear();
+}
 function servTag(s) {
     const map = {
         AFILIACION: ['tag-afil', 'Afiliación'],
@@ -202,23 +221,24 @@ function updateDate() {
 
 // Dashboard
 function renderDashboard() {
-    const totalAten = atencionData.length;
-    const totalPens = pensionadosData.length;
+    const currentYear = new Date().getFullYear();
+    const totalAten = atencionData.filter(r => getAnio(r.fecha) === currentYear).length;
+    const totalPens = pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear).length;
     const mesActual = getMes(getLocalDateStr());
-    const atenMes = atencionData.filter(r => getMes(r.fecha) === mesActual).length;
-    const pensMes = pensionadosData.filter(r => r.mes === mesActual).length;
+    const atenMes = atencionData.filter(r => getAnio(r.fecha) === currentYear && getMes(r.fecha) === mesActual).length;
+    const pensMes = pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear && r.mes === mesActual).length;
 
     const dailyStats = getDailyStats();
     document.getElementById('dash-stats').innerHTML = `
     <div class="stat-card">
       <div class="stat-label">Total Atención Al Público</div>
       <div class="stat-value animate-num" data-target="${totalAten}">0</div>
-      <div class="stat-sub-text">Registros este año</div>
+      <div class="stat-sub-text">Registros este año (${currentYear})</div>
     </div>
     <div class="stat-card gold">
       <div class="stat-label">Pensionados Registrados</div>
       <div class="stat-value animate-num" data-target="${totalPens}">0</div>
-      <div class="stat-sub-text">Registros este año</div>
+      <div class="stat-sub-text">Registros este año (${currentYear})</div>
     </div>
     <div class="stat-card green">
       <div class="stat-label">Atención Al Público Este Mes</div>
@@ -358,8 +378,10 @@ function drawDashCharts() {
     const activeRed = style.getPropertyValue('--red').trim() || '#c0392b';
     const activePalette = [activeNavy, activeNavyLight, activeGold, activeGoldLight, activeGreen, activeRed];
 
+    const currentYear = new Date().getFullYear();
+
     // Monthly attendance
-    const monthCounts = MONTHS.map(m => atencionData.filter(r => getMes(r.fecha) === m).length);
+    const monthCounts = MONTHS.map(m => atencionData.filter(r => getAnio(r.fecha) === currentYear && getMes(r.fecha) === m).length);
     new Chart(document.getElementById('chart-monthly'), {
         type: 'bar',
         data: {
@@ -410,7 +432,7 @@ function drawDashCharts() {
     // Services pie
     const servKeys = ['AFILIACION', 'PRESTACIONES', 'RECAUDACION_COBRANZA', 'ATENCION_CESANTE', 'FISCALIZACION', 'OTRAS_ATENCIONES'];
     const servLabels = ['Afiliación', 'Prestaciones', 'Recaud.', 'At. Cesante', 'Fiscalización', 'Otras'];
-    const servCounts = servKeys.map(k => atencionData.filter(r => r.servicio === k).length);
+    const servCounts = servKeys.map(k => atencionData.filter(r => getAnio(r.fecha) === currentYear && r.servicio === k).length);
     new Chart(document.getElementById('chart-services'), {
         type: 'doughnut',
         data: { 
@@ -427,8 +449,8 @@ function drawDashCharts() {
     });
 
     // Gender
-    const gM = pensionadosData.filter(r => r.genero === 'M').length;
-    const gF = pensionadosData.filter(r => r.genero === 'F').length;
+    const gM = pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear && r.genero === 'M').length;
+    const gF = pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear && r.genero === 'F').length;
     new Chart(document.getElementById('chart-gender'), {
         type: 'pie',
         data: { 
@@ -446,7 +468,7 @@ function drawDashCharts() {
 
     // Pension type (ordenados de mayor a menor porcentaje)
     const ptypes = {};
-    pensionadosData.forEach(r => { const k = r.tipoPension || 'Sin datos'; ptypes[k] = (ptypes[k] || 0) + 1; });
+    pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear).forEach(r => { const k = r.tipoPension || 'Sin datos'; ptypes[k] = (ptypes[k] || 0) + 1; });
     const sortedPtypes = Object.entries(ptypes)
         .map(([label, value]) => ({ label, value }))
         .sort((a, b) => b.value - a.value);
@@ -699,9 +721,15 @@ async function saveAtencion() {
     }
 }
 
-function editAtencion(id) { openAtencionModal(id); }
+async function editAtencion(id) {
+    const pinOk = await askSecurityPin();
+    if (!pinOk) return;
+    openAtencionModal(id);
+}
 
 async function deleteAtencion(id) {
+    const pinOk = await askSecurityPin();
+    if (!pinOk) return;
     const ok = await customConfirm({ title: '¿Eliminar registro?', msg: 'Se eliminará esta atención permanentemente.', okLabel: 'Sí, eliminar', okClass: 'btn-danger', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass: 'danger' });
     if (!ok) return;
     try {
@@ -1060,9 +1088,15 @@ async function savePensionado() {
     }
 }
 
-function editPensionado(id) { openPensionadoModal(id); }
+async function editPensionado(id) {
+    const pinOk = await askSecurityPin();
+    if (!pinOk) return;
+    openPensionadoModal(id);
+}
 
 async function deletePensionado(id) {
+    const pinOk = await askSecurityPin();
+    if (!pinOk) return;
     const ok = await customConfirm({ title: '¿Eliminar pensionado?', msg: 'Se eliminará este registro del censo permanentemente.', okLabel: 'Sí, eliminar', okClass: 'btn-danger', icon: `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`, iconClass: 'danger' });
     if (!ok) return;
     try {
@@ -1072,7 +1106,9 @@ async function deletePensionado(id) {
     } catch (e) { toast('Error al eliminar', 'error'); }
 }
 
-function viewPensionado(id) {
+async function viewPensionado(id) {
+    const pinOk = await askSecurityPin();
+    if (!pinOk) return;
     const r = pensionadosData.find(x => x.id === id);
     if (!r) return;
     const field = (label, val) => val ? `
@@ -1134,23 +1170,26 @@ function renderReportes() {
     const tbody = document.getElementById('rep-tbody');
     grid.innerHTML = '';
     let rows = '';
+    const currentYear = new Date().getFullYear();
+
     MONTHS.forEach((m, i) => {
-        const pensCount = pensionadosData.filter(r => r.mes === m).length;
+        const pensCount = pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear && r.mes === m).length;
         const card = document.createElement('div');
         card.className = 'month-card';
         
         card.style.cursor = 'pointer';
-        card.onclick = () => abrirModalReporteMensual(new Date().getFullYear(), i);
+        card.onclick = () => abrirModalReporteMensual(currentYear, i);
         
         card.innerHTML = `<div class="month-name">${m.slice(0, 3)}</div><div class="month-count">${pensCount}</div>`;
         grid.appendChild(card);
         
-        const atenMes = atencionData.filter(r => getMes(r.fecha) === m);
+        const atenMes = atencionData.filter(r => getAnio(r.fecha) === currentYear && getMes(r.fecha) === m);
         const count = atenMes.length;
         const countS = k => atenMes.filter(r => r.servicio === k).length;
         const af = countS('AFILIACION'), pr = countS('PRESTACIONES'), rc = countS('RECAUDACION_COBRANZA'),
             ce = countS('ATENCION_CESANTE'), fi = countS('FISCALIZACION'), ot = countS('OTRAS_ATENCIONES');
-        const bg = count > 0 ? 'var(--gold-pale)' : '';
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const bg = count > 0 ? (isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(56, 189, 248, 0.12)') : '';
         rows += `<tr style="background:${bg}">
       <td><strong>${m}</strong></td>
       <td><strong>${count}</strong></td>
@@ -1286,6 +1325,7 @@ function drawReporteCharts() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const gridColor = isDark ? '#223766' : '#eef2f8';
     Chart.defaults.color = isDark ? '#94a3b8' : '#6b7a99';
+    const currentYear = new Date().getFullYear();
 
     const style = getComputedStyle(document.documentElement);
     const activeGold = style.getPropertyValue('--gold').trim() || '#c8922a';
@@ -1301,7 +1341,7 @@ function drawReporteCharts() {
     const servLabels = ['Afiliación', 'Prestaciones', 'Recaud.', 'At. Cesante', 'Fiscalización', 'Otras'];
     const datasets = servKeys.map((k, i) => ({
         label: servLabels[i],
-        data: MONTHS.map(m => atencionData.filter(r => getMes(r.fecha) === m && r.servicio === k).length),
+        data: MONTHS.map(m => atencionData.filter(r => getAnio(r.fecha) === currentYear && getMes(r.fecha) === m && r.servicio === k).length),
         backgroundColor: activePalette[i], borderRadius: 3, stack: 'stack'
     }));
 
@@ -1311,12 +1351,15 @@ function drawReporteCharts() {
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: gridColor } } } }
     });
 
-    const pensCounts = MONTHS.map(m => pensionadosData.filter(r => r.mes === m).length);
+    const pensBorderColor = isDark ? '#38bdf8' : '#0284c7';
+    const pensBgColor = isDark ? 'rgba(56, 189, 248, 0.18)' : 'rgba(2, 132, 199, 0.12)';
+
+    const pensCounts = MONTHS.map(m => pensionadosData.filter(r => getAnio(r.fecha || r.fechaRegistro) === currentYear && r.mes === m).length);
     new Chart(document.getElementById('rep-chart-pens'), {
         type: 'line',
         data: {
             labels: MONTHS.map(m => m.slice(0, 3)),
-            datasets: [{ label: 'Pensionados', data: pensCounts, borderColor: activeGold, backgroundColor: activeGoldPale, fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: activeGold }]
+            datasets: [{ label: 'Pensionados', data: pensCounts, borderColor: pensBorderColor, backgroundColor: pensBgColor, fill: true, tension: .35, pointRadius: 5, pointBackgroundColor: pensBorderColor }]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: gridColor } } } }
     });
@@ -1388,6 +1431,79 @@ function customConfirm({ title = '¿Estás seguro?', msg = 'Esta acción no se p
     });
 }
 
+// ── CONFIRMACIÓN CON PIN DE SEGURIDAD (0805 - SOLO OPERADORES)
+function askSecurityPin() {
+    // Si el usuario es Administrador, omite el PIN completamente
+    if (typeof currentUserRole !== 'undefined' && currentUserRole === 'admin') {
+        return Promise.resolve(true);
+    }
+
+    return new Promise(resolve => {
+        const dialog = document.getElementById('modal-pin-confirm');
+        const input = document.getElementById('pin-confirm-input');
+        const error = document.getElementById('pin-confirm-error');
+        const okBtn = document.getElementById('btn-pin-ok');
+        const cancelBtn = document.getElementById('btn-pin-cancel');
+
+        if (!dialog || !input) return resolve(true);
+
+        input.value = '';
+        if (error) error.textContent = '';
+        dialog.style.display = 'flex';
+        setTimeout(() => input.focus(), 100);
+
+        const cleanup = (result) => {
+            dialog.style.display = 'none';
+            okBtn.replaceWith(okBtn.cloneNode(true));
+            cancelBtn.replaceWith(cancelBtn.cloneNode(true));
+            input.removeEventListener('keydown', onKeyDown);
+            resolve(result);
+        };
+
+        const onOk = () => {
+            const pinVal = input.value.trim();
+            if (!pinVal) {
+                if (error) {
+                    error.textContent = 'Por favor inserte el PIN requerido';
+                    error.classList.remove('shake');
+                    void error.offsetWidth;
+                    error.classList.add('shake');
+                }
+                input.focus();
+                return;
+            }
+            if (pinVal === '0805') {
+                cleanup(true);
+            } else {
+                if (error) {
+                    error.textContent = 'PIN de seguridad incorrecto. Intente nuevamente.';
+                    error.classList.remove('shake');
+                    void error.offsetWidth; // trigger reflow
+                    error.classList.add('shake');
+                }
+                input.value = '';
+                input.focus();
+            }
+        };
+
+        const onCancel = () => cleanup(false);
+
+        function onKeyDown(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                onOk();
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                onCancel();
+            }
+        }
+
+        document.getElementById('btn-pin-ok').addEventListener('click', onOk);
+        document.getElementById('btn-pin-cancel').addEventListener('click', onCancel);
+        input.addEventListener('keydown', onKeyDown);
+    });
+}
+
 // ── INIT: gestionado por auth.onAuthStateChanged en firebase-ops.js
 
 // ── EXCEL EXPORTS (ExcelJS) ─────────────────────────
@@ -1445,6 +1561,24 @@ function styleWorksheet(worksheet, headerRowNumber = 1) {
     });
 }
 
+function addLogoToExcel(workbook, worksheet, { col = 0, row = 0, width = 44, height = 44 } = {}) {
+    try {
+        if (typeof LOGO_IVSS_BASE64 === 'undefined' || !LOGO_IVSS_BASE64) return;
+
+        const imageId = workbook.addImage({
+            base64: LOGO_IVSS_BASE64,
+            extension: 'png',
+        });
+
+        worksheet.addImage(imageId, {
+            tl: { col: col + 0.15, row: row + 0.08 },
+            ext: { width: width, height: height }
+        });
+    } catch (e) {
+        console.warn("No se pudo agregar el logo en Excel:", e);
+    }
+}
+
 async function exportAtencionExcel() {
     const dDesde = document.getElementById('export-desde').value;
     const dHasta = document.getElementById('export-hasta').value;
@@ -1483,10 +1617,12 @@ async function exportAtencionExcel() {
     // Fila 1: Título del reporte (celdas combinadas de A a H)
     worksheet.mergeCells(1, 1, 1, 8);
     const titleCell = worksheet.getCell(1, 1);
-    titleCell.value = 'OA CABIMAS ATENCION AL PUBLICO';
-    titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF1A2744' } };
+    titleCell.value = '        OA CABIMAS ATENCION AL PUBLICO';
+    titleCell.font = { name: 'Arial', size: 13, bold: true, color: { argb: 'FF1A2744' } };
     titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
-    worksheet.getRow(1).height = 30;
+    worksheet.getRow(1).height = 52;
+
+    addLogoToExcel(workbook, worksheet, { col: 0, row: 0, width: 44, height: 44 });
 
     // Fila 2: Cabeceras de las columnas
     const headerRow = worksheet.getRow(2);
@@ -1582,13 +1718,15 @@ async function exportPensionadosExcel() {
 
     worksheet.columns = headers.map(x => ({ key: x.k, width: x.w }));
 
-    // Fila 1: Título del reporte (celdas combinadas - columnas C-L)
-    worksheet.mergeCells(1, 3, 1, 12);
-    const titleCell = worksheet.getCell(1, 3);
-    titleCell.value = 'CENSO DE PENSIONADOS Y PENSIONADAS DE LA DIRECCION DE AFILIACION Y PRESTACIONES EN DINERO';
+    // Fila 1: Título del reporte (celdas combinadas - columnas A-L)
+    worksheet.mergeCells(1, 1, 1, 12);
+    const titleCell = worksheet.getCell(1, 1);
+    titleCell.value = '        CENSO DE PENSIONADOS Y PENSIONADAS DE LA DIRECCION DE AFILIACION Y PRESTACIONES EN DINERO';
     titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF1A2744' } };
-    titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
-    worksheet.getRow(1).height = 35;
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 52;
+
+    addLogoToExcel(workbook, worksheet, { col: 0, row: 0, width: 44, height: 44 });
 
     // Fila 2: Cabeceras de las columnas
     const headerRow = worksheet.getRow(2);

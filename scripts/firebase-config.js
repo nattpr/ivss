@@ -27,7 +27,6 @@ db.enablePersistence({ synchronizeTabs: true })
 
 const auth = firebase.auth();
 
-// gestión secundaria de usuarios sin perder sesión
 const secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
 const secondaryAuth = secondaryApp.auth();
 
