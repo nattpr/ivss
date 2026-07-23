@@ -4,6 +4,7 @@ let atencionData = [];
 let pensionadosData = [];
 let editAtenId = null;
 let editPensId = null;
+let systemSecurityPin = '0805'; // PIN de seguridad dinámico del sistema
 
 // ── SAVE GUARDS (previenen doble submit)
 let isSavingAten = false;
@@ -1472,7 +1473,7 @@ function askSecurityPin() {
                 input.focus();
                 return;
             }
-            if (pinVal === '0805') {
+            if (pinVal === systemSecurityPin) {
                 cleanup(true);
             } else {
                 if (error) {
@@ -2143,6 +2144,7 @@ async function deleteUsuario(username, oldPass) {
 }
 
 // ── AJUSTES & TEMA OSCURO
+let isPinVisible = false;
 function initAjustesThemeToggle() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const checkbox = document.getElementById('theme-toggle-checkbox');
@@ -2152,12 +2154,34 @@ function initAjustesThemeToggle() {
     
     // Si el usuario es administrador, mostrar la sección de usuarios y cargar su tabla
     const userSection = document.getElementById('ajustes-usuarios-section');
+    const segSection = document.getElementById('ajustes-seguridad-section');
     if (userSection) {
         if (currentUserRole === 'admin') {
             userSection.style.display = 'block';
             renderUsuariosTable();
         } else {
             userSection.remove();
+        }
+    }
+
+    if (segSection) {
+        if (currentUserRole === 'admin') {
+            segSection.style.display = 'block';
+            const pinTextEl = document.getElementById('pin-display-text');
+            if (pinTextEl) {
+                pinTextEl.textContent = systemSecurityPin;
+            }
+            isPinVisible = false;
+            const dotsEl = document.getElementById('pin-display-dots');
+            const textEl = document.getElementById('pin-display-text');
+            const eyeIcon = document.getElementById('icon-pin-eye');
+            if (dotsEl) dotsEl.style.display = 'inline';
+            if (textEl) textEl.style.display = 'none';
+            if (eyeIcon) {
+                eyeIcon.setAttribute('data-lucide', 'eye');
+            }
+        } else {
+            segSection.remove();
         }
     }
     
@@ -2174,5 +2198,132 @@ function toggleTheme(checkbox) {
     }
     if (currentView === 'dashboard') {
         renderDashboard();
+    }
+}
+
+// ── SEGURIDAD DEL SISTEMA: CAMBIAR PIN
+function togglePinVisibility() {
+    isPinVisible = !isPinVisible;
+    const dotsEl = document.getElementById('pin-display-dots');
+    const textEl = document.getElementById('pin-display-text');
+    const eyeIcon = document.getElementById('icon-pin-eye');
+    
+    if (isPinVisible) {
+        if (dotsEl) dotsEl.style.display = 'none';
+        if (textEl) textEl.style.display = 'inline';
+        if (eyeIcon) eyeIcon.setAttribute('data-lucide', 'eye-off');
+    } else {
+        if (dotsEl) dotsEl.style.display = 'inline';
+        if (textEl) textEl.style.display = 'none';
+        if (eyeIcon) eyeIcon.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons();
+}
+
+function openChangePinModal() {
+    const modal = document.getElementById('modal-change-pin');
+    if (modal) {
+        const fields = ['pin-current-val', 'pin-new-val', 'pin-confirm-val'];
+        const suffix = ['curr', 'new', 'conf'];
+        fields.forEach((id, idx) => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.value = '';
+                input.type = 'password';
+            }
+            const eyeOpen = document.getElementById(`eye-open-${suffix[idx]}`);
+            const eyeClosed = document.getElementById(`eye-closed-${suffix[idx]}`);
+            if (eyeOpen) eyeOpen.style.display = 'block';
+            if (eyeClosed) eyeClosed.style.display = 'none';
+        });
+        const errorEl = document.getElementById('pin-change-error');
+        if (errorEl) errorEl.textContent = '';
+        modal.classList.remove('hidden');
+        document.getElementById('pin-current-val').focus();
+    }
+}
+
+function closeChangePinModal() {
+    const modal = document.getElementById('modal-change-pin');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+async function saveSecurityPin() {
+    const currentVal = document.getElementById('pin-current-val').value.trim();
+    const newVal = document.getElementById('pin-new-val').value.trim();
+    const confirmVal = document.getElementById('pin-confirm-val').value.trim();
+    const errorEl = document.getElementById('pin-change-error');
+    const btn = document.getElementById('btn-save-pin');
+
+    if (errorEl) errorEl.textContent = '';
+
+    const shakeError = (msg) => {
+        if (errorEl) {
+            errorEl.textContent = msg;
+            errorEl.classList.remove('shake');
+            void errorEl.offsetWidth; // trigger reflow
+            errorEl.classList.add('shake');
+        }
+    };
+
+    if (!currentVal || !newVal || !confirmVal) {
+        shakeError('Por favor complete todos los campos');
+        return;
+    }
+
+    if (currentVal !== systemSecurityPin) {
+        shakeError('El PIN de seguridad actual es incorrecto');
+        return;
+    }
+
+    if (newVal.length !== 4 || !/^\d{4}$/.test(newVal)) {
+        shakeError('El nuevo PIN debe tener exactamente 4 dígitos numéricos');
+        return;
+    }
+
+    if (newVal !== confirmVal) {
+        shakeError('La confirmación no coincide con el nuevo PIN');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Guardando...';
+
+    try {
+        await fsUpdateSecurityPin(newVal);
+        toast('PIN de seguridad actualizado correctamente');
+        
+        // Actualizar UI en ajustes
+        const pinTextEl = document.getElementById('pin-display-text');
+        if (pinTextEl) {
+            pinTextEl.textContent = newVal;
+        }
+
+        closeChangePinModal();
+    } catch (e) {
+        toast('Error al actualizar el PIN: ' + e.message, 'error');
+        console.error(e);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Actualizar PIN';
+    }
+}
+
+function toggleFieldVisibility(inputId, eyeOpenId, eyeClosedId) {
+    const input = document.getElementById(inputId);
+    const eyeOpen = document.getElementById(eyeOpenId);
+    const eyeClosed = document.getElementById(eyeClosedId);
+    if (input && eyeOpen && eyeClosed) {
+        if (input.type === 'password') {
+            input.type = 'text';
+            eyeOpen.style.display = 'none';
+            eyeClosed.style.display = 'block';
+        } else {
+            input.type = 'password';
+            eyeOpen.style.display = 'block';
+            eyeClosed.style.display = 'none';
+        }
     }
 }

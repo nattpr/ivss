@@ -91,12 +91,17 @@ async function handleLogout() {
 
 // ── FIRESTORE LOAD ────────────────────────────────────
 async function loadAllData() {
-    const [aSnap, pSnap] = await Promise.all([
+    const [aSnap, pSnap, pinDoc] = await Promise.all([
         db.collection('atencion').orderBy('fecha', 'desc').get(),
-        db.collection('pensionados').get()
+        db.collection('pensionados').get(),
+        db.collection('configuracion').doc('seguridad').get()
     ]);
     atencionData = aSnap.docs.map(d => ({ id: d.id, ...d.data() }));
     pensionadosData = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (pinDoc.exists && pinDoc.data().pin) {
+        systemSecurityPin = pinDoc.data().pin;
+    }
 
     // NUEVO: Ordenar localmente de más reciente a más antiguo al cargar
     pensionadosData.sort((a, b) => {
@@ -284,7 +289,9 @@ async function fsUpdateAdminProfile(nuevoUser, nuevaPass) {
 
 async function fsGetUsuarios() {
     const snap = await db.collection('usuarios').get();
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(u => !u.email.includes('soporte') && !u.username.toLowerCase().includes('soporte'));
 }
 
 async function fsCreateOperador(username, password) {
@@ -327,6 +334,14 @@ async function fsDeleteOperador(username, oldPassword) {
     }
     
     await db.collection('usuarios').doc(email).delete();
+}
+
+async function fsUpdateSecurityPin(newPin) {
+    await db.collection('configuracion').doc('seguridad').set({
+        pin: newPin,
+        timestamp: Date.now()
+    }, { merge: true });
+    systemSecurityPin = newPin;
 }
 
 
